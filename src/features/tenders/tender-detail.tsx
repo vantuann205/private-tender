@@ -13,8 +13,7 @@ export function TenderDetail({ id }: { id: string }) {
       <div className="empty">
         <h1>Tender not found</h1>
         <p>
-          {error ||
-            "This tender may belong to another browser's local workspace."}
+          {error || "This tender may belong to a different browser workspace."}
         </p>
         <Link href="/" className="button">
           Back to tender board

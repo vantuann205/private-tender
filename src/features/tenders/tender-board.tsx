@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icon";
 import { tenderStatus } from "./domain";
 import { useTenders } from "./use-tenders";
+import { refreshTenders } from "./storage";
 import { StatusBadge, TenderDate } from "./tender-meta";
 export function TenderBoard({ vendor = false }: { vendor?: boolean }) {
   const { tenders, error } = useTenders();
@@ -76,7 +77,13 @@ export function TenderBoard({ vendor = false }: { vendor?: boolean }) {
       </div>
       {error && (
         <div role="alert" className="error-banner">
-          {error}
+          {error}{" "}
+          <button
+            className="button secondary"
+            onClick={() => void refreshTenders()}
+          >
+            Retry connection
+          </button>
         </div>
       )}
       <div className="board-tools">
@@ -163,7 +170,7 @@ export function TenderBoard({ vendor = false }: { vendor?: boolean }) {
         <span>
           {visible.length} of {tenders.length} tenders
         </span>
-        <span>Demonstration data · Stored in this browser only</span>
+        <span>PostgreSQL persistence · Browser-scoped demo workspace</span>
       </div>
       <div className="notice">
         <Icon name="shield" />

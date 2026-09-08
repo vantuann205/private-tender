@@ -66,7 +66,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <br />
             Confidential participation.
           </p>
-          <span>First pass · Local demo</span>
+          <span>First pass · Database-backed demo</span>
         </div>
         <div className="profile">
           <span className="profile-avatar">NC</span>
@@ -82,7 +82,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </span>
           <span className="demo-indicator">
             <i />
-            Local demo
+            Browser workspace
           </span>
         </header>
         <main id="main" className="main-content">

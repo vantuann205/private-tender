@@ -14,7 +14,7 @@ export function CreateTenderForm() {
   >({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const input: TenderInput = {
@@ -31,10 +31,10 @@ export function CreateTenderForm() {
     setSaving(true);
     setError("");
     try {
-      router.push(`/tenders/${createTender(input).id}`);
+      router.push(`/tenders/${(await createTender(input)).id}`);
     } catch {
       setError(
-        "The tender could not be saved. Check browser storage permissions and try again. Your form entries are still here.",
+        "The tender could not be saved. Check your connection and the workspace limit, then try again. Your form entries are still here.",
       );
       setSaving(false);
     }
@@ -177,8 +177,9 @@ export function CreateTenderForm() {
               and give vendors enough time to respond.
             </p>
             <p>
-              This demo saves the tender in this browser only. It does not
-              publish to Midnight or invite vendors.
+              This demo saves public tender details in PostgreSQL, scoped to
+              this browser’s workspace cookie. It does not publish to Midnight
+              or invite vendors.
             </p>
           </div>
         </aside>

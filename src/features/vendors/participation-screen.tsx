@@ -8,7 +8,7 @@ import { StatusBadge } from "@/features/tenders/tender-meta";
 import { submitDemoBid, type BidReceipt } from "@/features/bidding/submit-bid";
 import { proveEligibility, type EligibilityResult } from "./eligibility";
 export function ParticipationScreen({ id }: { id: string }) {
-  const { tenders } = useTenders();
+  const { tenders, error: databaseError } = useTenders();
   const [meets, setMeets] = useState(false);
   const [proof, setProof] = useState<EligibilityResult | null>(null);
   const [amount, setAmount] = useState("");
@@ -19,7 +19,8 @@ export function ParticipationScreen({ id }: { id: string }) {
   if (!tender)
     return (
       <div className="empty">
-        <h1>Tender not found</h1>
+        <h1>{databaseError ? "Workspace unavailable" : "Tender not found"}</h1>
+        {databaseError && <p role="alert">{databaseError}</p>}
         <Link className="button" href="/participate">
           View opportunities
         </Link>

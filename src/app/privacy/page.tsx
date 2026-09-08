@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <div>
           <strong>Current progress: ~25%</strong>
           <p>
-            A functional local product prototype. No live Midnight connection,
+            A database-backed product prototype. No live Midnight connection,
             wallet, or production privacy guarantees.
           </p>
         </div>
@@ -23,17 +23,28 @@ export default function PrivacyPage() {
         <h2>Public tender state</h2>
         <p>
           Titles, descriptions, requirements, deadlines, status, and winner
-          rules are saved in this browser’s local storage. They are
-          demonstration records, not an on-chain registry. Anyone using the same
-          browser profile can read or modify them. Different browsers and tabs
-          are not synchronized.
+          rules are saved in Neon PostgreSQL through this app’s server. These
+          public-model fields are scoped to your anonymous browser workspace,
+          not published to an on-chain registry. The database operator can read
+          them; this is not end-to-end encryption. Only fictional data belongs
+          here.
+        </p>
+        <h2>Your browser holds the workspace key</h2>
+        <p>
+          A random 32-byte token is stored in an HttpOnly, SameSite=Lax cookie
+          (Secure on the hosted site). The database stores only its SHA-256
+          hash. Every tender read and write is scoped to that hash. The cookie
+          lasts 30 days. Anyone holding it can access the workspace: this is
+          bearer-token isolation, not verified identity, organization login, or
+          account recovery. Clearing cookies, changing browser, or cookie expiry
+          starts a new workspace.
         </p>
         <h2>Private bid input</h2>
         <p>
           The bid amount stays in the participation screen’s memory. On
           submission, the development adapter validates it and discards it. No
-          amount is added to the tender model, stored in local storage, logged,
-          or sent over the network. The local receipt contains no amount and
+          amount is added to the tender model, stored in PostgreSQL, logged, or
+          sent over the network. The local receipt contains no amount and
           disappears on navigation or reload.
         </p>
         <p>
@@ -73,12 +84,14 @@ export default function PrivacyPage() {
             exposing losing bids.
           </li>
         </ul>
-        <h2>Reset the demonstration</h2>
+        <h2>Data lifetime and availability</h2>
         <p>
-          Clear this site’s local storage through your browser settings to
-          remove locally created tenders. The sample board is restored on the
-          next full reload. This also removes other site data; there is no
-          recovery or shared backup.
+          Clearing the cookie does not delete existing database records. This
+          pass has no account recovery, user-facing deletion, automatic
+          retention cleanup, or production abuse protection. Database outages
+          show an error; the app never falls back to local storage. Old
+          local-demo records are not automatically imported or erased. Use
+          fictional data only.
         </p>
         <Link className="button secondary" href="/">
           Back to tender board
