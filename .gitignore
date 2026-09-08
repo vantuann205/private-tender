@@ -1,4 +1,7 @@
 node_modules/
+.vercel/
+.neon
+.neon/
 next-env.d.ts
 .next/
 out/
@@ -8,3 +11,5 @@ out/
 coverage/
 playwright-report/
 test-results/
+
+.vercel

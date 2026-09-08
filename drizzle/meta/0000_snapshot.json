@@ -1,0 +1,167 @@
+{
+  "id": "b52d18e8-6a92-4d99-9c23-8d67d61f165d",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.pt_tenders": {
+      "name": "pt_tenders",
+      "schema": "",
+      "columns": {
+        "workspace_hash": {
+          "name": "workspace_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requirements": {
+          "name": "requirements",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deadline": {
+          "name": "deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "winner_rule": {
+          "name": "winner_rule",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization": {
+          "name": "organization",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pt_tenders_workspace_hash_pt_workspaces_token_hash_fk": {
+          "name": "pt_tenders_workspace_hash_pt_workspaces_token_hash_fk",
+          "tableFrom": "pt_tenders",
+          "tableTo": "pt_workspaces",
+          "columnsFrom": [
+            "workspace_hash"
+          ],
+          "columnsTo": [
+            "token_hash"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pt_tenders_workspace_hash_id_pk": {
+          "name": "pt_tenders_workspace_hash_id_pk",
+          "columns": [
+            "workspace_hash",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pt_tenders_status": {
+          "name": "pt_tenders_status",
+          "value": "\"pt_tenders\".\"status\" IN ('Draft', 'Open', 'Closed')"
+        },
+        "pt_tenders_title": {
+          "name": "pt_tenders_title",
+          "value": "length(trim(\"pt_tenders\".\"title\")) BETWEEN 1 AND 120"
+        },
+        "pt_tenders_description": {
+          "name": "pt_tenders_description",
+          "value": "length(trim(\"pt_tenders\".\"description\")) BETWEEN 1 AND 3000"
+        },
+        "pt_tenders_requirements": {
+          "name": "pt_tenders_requirements",
+          "value": "cardinality(\"pt_tenders\".\"requirements\") BETWEEN 1 AND 1500 AND length(array_to_string(\"pt_tenders\".\"requirements\", E'\n')) <= 3000"
+        },
+        "pt_tenders_winner_rule": {
+          "name": "pt_tenders_winner_rule",
+          "value": "\"pt_tenders\".\"winner_rule\" IN ('Lowest eligible bid', 'Manual review (future)')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pt_workspaces": {
+      "name": "pt_workspaces",
+      "schema": "",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
