@@ -1,0 +1,8 @@
+.env*
+!.env.example
+.neon
+node_modules
+.next
+coverage
+test-results
+playwright-report
