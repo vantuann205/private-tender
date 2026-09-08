@@ -11,22 +11,52 @@ test("demo eligibility returns a tender-bound decision for both eligible and ine
   assert.equal(proveEligibility(tender, true, now).tenderId, tender.id);
 });
 test("eligibility cannot be checked for draft or expired tenders", () => {
-  assert.throws(() => proveEligibility({ ...tender, status: "Draft" }, true, now));
-  assert.throws(() => proveEligibility(tender, true, Date.parse(tender.deadline)));
+  assert.throws(() =>
+    proveEligibility({ ...tender, status: "Draft" }, true, now),
+  );
+  assert.throws(() =>
+    proveEligibility(tender, true, Date.parse(tender.deadline)),
+  );
 });
 test("a demo participation flow returns a receipt without retaining the amount", () => {
-  const receipt = submitDemoBid(tender, proveEligibility(tender, true, now), "1200.50", now);
+  const receipt = submitDemoBid(
+    tender,
+    proveEligibility(tender, true, now),
+    "1200.50",
+    now,
+  );
   assert.equal(receipt.tenderId, tender.id);
   assert.equal("amount" in receipt, false);
   assert.equal(JSON.stringify(receipt).includes("1200.50"), false);
 });
 test("submission rejects missing, ineligible, and wrong-tender eligibility results", () => {
   assert.throws(() => submitDemoBid(tender, null, "100", now));
-  assert.throws(() => submitDemoBid(tender, proveEligibility(tender, false, now), "100", now));
-  assert.throws(() => submitDemoBid(tender, { ...proveEligibility(tender, true, now), tenderId: "other" }, "100", now));
+  assert.throws(() =>
+    submitDemoBid(tender, proveEligibility(tender, false, now), "100", now),
+  );
+  assert.throws(() =>
+    submitDemoBid(
+      tender,
+      { ...proveEligibility(tender, true, now), tenderId: "other" },
+      "100",
+      now,
+    ),
+  );
 });
 test("submission rechecks deadline and rejects invalid money inputs", () => {
   const proof = proveEligibility(tender, true, now);
-  assert.throws(() => submitDemoBid(tender, proof, "100", Date.parse(tender.deadline)));
-  for (const amount of ["", "0", "-1", "1.001", "NaN", "Infinity", "1e3", "1000000000000"]) assert.throws(() => submitDemoBid(tender, proof, amount, now));
+  assert.throws(() =>
+    submitDemoBid(tender, proof, "100", Date.parse(tender.deadline)),
+  );
+  for (const amount of [
+    "",
+    "0",
+    "-1",
+    "1.001",
+    "NaN",
+    "Infinity",
+    "1e3",
+    "1000000000000",
+  ])
+    assert.throws(() => submitDemoBid(tender, proof, amount, now));
 });

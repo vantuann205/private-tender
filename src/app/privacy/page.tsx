@@ -1,5 +1,89 @@
 import Link from "next/link";
 import { Icon } from "@/components/icon";
 export default function PrivacyPage() {
-  return <><div className="page-heading"><div><h1>Privacy, without the fine print.</h1><p>What this first pass does—and what it does not.</p></div></div><div className="notice"><Icon name="shield" /><div><strong>Current progress: ~25%</strong><p>A functional local product prototype. No live Midnight connection, wallet, or production privacy guarantees.</p></div></div><article className="prose"><h2>Public tender state</h2><p>Titles, descriptions, requirements, deadlines, status, and winner rules are saved in this browser’s local storage. They are demonstration records, not an on-chain registry. Anyone using the same browser profile can read or modify them. Different browsers and tabs are not synchronized.</p><h2>Private bid input</h2><p>The bid amount stays in the participation screen’s memory. On submission, the development adapter validates it and discards it. No amount is added to the tender model, stored in local storage, logged, or sent over the network. The local receipt contains no amount and disappears on navigation or reload.</p><p>This is data separation, not encryption or zero-knowledge privacy. Browser extensions, developer tools, or a compromised device may read form inputs. Use fictional data only.</p><h2>Eligibility is simulated</h2><p>“Prove Eligibility” uses your self-attestation to show the eligible or ineligible branch. It does not verify a credential, business identity, or cryptographic proof. The isolated development adapter will be replaced by a real Midnight integration.</p><h2>Midnight foundation</h2><p>The repository includes a Compact contract skeleton checked with compiler 0.26.0 and language 0.18.0 using <code>--skip-zk</code>. It models public tender state, deadline assertions, eligibility witnesses, and private bid input. It has no authorization or credential validation and must not be deployed.</p><h2>Intentionally next</h2><ul><li>Wallet connection, trusted credentials, proof generation, and deployment.</li><li>Authenticated organization storage and tender lifecycle editing.</li><li>Confidential bid commitments and duplicate participation controls.</li><li>Winner selection, settlement, and verifiable results without exposing losing bids.</li></ul><h2>Reset the demonstration</h2><p>Clear this site’s local storage through your browser settings to remove locally created tenders. The sample board is restored on the next full reload. This also removes other site data; there is no recovery or shared backup.</p><Link className="button secondary" href="/">Back to tender board</Link></article></>;
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h1>Privacy, without the fine print.</h1>
+          <p>What this first pass does—and what it does not.</p>
+        </div>
+      </div>
+      <div className="notice">
+        <Icon name="shield" />
+        <div>
+          <strong>Current progress: ~25%</strong>
+          <p>
+            A functional local product prototype. No live Midnight connection,
+            wallet, or production privacy guarantees.
+          </p>
+        </div>
+      </div>
+      <article className="prose">
+        <h2>Public tender state</h2>
+        <p>
+          Titles, descriptions, requirements, deadlines, status, and winner
+          rules are saved in this browser’s local storage. They are
+          demonstration records, not an on-chain registry. Anyone using the same
+          browser profile can read or modify them. Different browsers and tabs
+          are not synchronized.
+        </p>
+        <h2>Private bid input</h2>
+        <p>
+          The bid amount stays in the participation screen’s memory. On
+          submission, the development adapter validates it and discards it. No
+          amount is added to the tender model, stored in local storage, logged,
+          or sent over the network. The local receipt contains no amount and
+          disappears on navigation or reload.
+        </p>
+        <p>
+          This is data separation, not encryption or zero-knowledge privacy.
+          Browser extensions, developer tools, or a compromised device may read
+          form inputs. Use fictional data only.
+        </p>
+        <h2>Eligibility is simulated</h2>
+        <p>
+          “Prove Eligibility” uses your self-attestation to show the eligible or
+          ineligible branch. It does not verify a credential, business identity,
+          or cryptographic proof. The isolated development adapter will be
+          replaced by a real Midnight integration.
+        </p>
+        <h2>Midnight foundation</h2>
+        <p>
+          The repository includes a Compact contract skeleton checked with
+          compiler 0.26.0 and language 0.18.0 using <code>--skip-zk</code>. It
+          models public tender state, deadline assertions, eligibility
+          witnesses, and private bid input. It has no authorization or
+          credential validation and must not be deployed.
+        </p>
+        <h2>Intentionally next</h2>
+        <ul>
+          <li>
+            Wallet connection, trusted credentials, proof generation, and
+            deployment.
+          </li>
+          <li>
+            Authenticated organization storage and tender lifecycle editing.
+          </li>
+          <li>
+            Confidential bid commitments and duplicate participation controls.
+          </li>
+          <li>
+            Winner selection, settlement, and verifiable results without
+            exposing losing bids.
+          </li>
+        </ul>
+        <h2>Reset the demonstration</h2>
+        <p>
+          Clear this site’s local storage through your browser settings to
+          remove locally created tenders. The sample board is restored on the
+          next full reload. This also removes other site data; there is no
+          recovery or shared backup.
+        </p>
+        <Link className="button secondary" href="/">
+          Back to tender board
+        </Link>
+      </article>
+    </>
+  );
 }
