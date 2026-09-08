@@ -76,7 +76,7 @@ corepack pnpm start
 
 The initial schema is in `drizzle/0000_initial_workspace_tenders.sql`; `db:migrate` uses Drizzle’s migration journal and is safe to repeat. `db:generate` generates the next migration after a schema change. Run migrations on a development Neon branch before production.
 
-For opt-in integration testing, migrate a disposable/test database, start the app against that same database, then run `corepack pnpm test:api` with `DATABASE_URL` and `TEST_BASE_URL` (defaults to `http://localhost:3111`). It checks persistence across requests, seed-once behavior, two-workspace isolation, cookie flags, mutation guards, and database-scoped records; it deletes only the fictional workspaces it created. It intentionally fails if database configuration is missing rather than silently reporting success.
+For opt-in integration testing, migrate a disposable/test database, start the app against that same database, then run `corepack pnpm test:api` with `DATABASE_URL` and `TEST_BASE_URL` (defaults to `http://localhost:3111`). It checks persistence across requests, seed-once behavior, two-workspace isolation, cookie flags, mutation guards, database-scoped records, and concurrent enforcement of the 500-record cap; it deletes only the fictional workspaces it created. It intentionally fails if database configuration is missing rather than silently reporting success.
 
 `lint` uses a supported Next.js flat config with ESLint 9; the upstream package currently emits a deprecation notice on installation, but lint is clean. A future tooling upgrade can move to ESLint 10 once the Next.js peer range supports it.
 

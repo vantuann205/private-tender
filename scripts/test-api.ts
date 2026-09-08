@@ -98,8 +98,22 @@ async function main() {
       [hashes[1], tender.id],
     );
     assert.equal(hidden.rowCount, 0);
+    await pool.query(
+      "INSERT INTO pt_tenders (workspace_hash,id,title,description,requirements,deadline,winner_rule,status,organization,category,created_at) SELECT workspace_hash, 'cap-check-' || n::text,title,description,requirements,deadline,winner_rule,status,organization,category,created_at FROM pt_tenders CROSS JOIN generate_series(1,494) AS n WHERE workspace_hash=$1 AND id=$2",
+      [hashes[0], tender.id],
+    );
+    const concurrent = await Promise.all([post(a, input), post(a, input)]);
+    assert.deepEqual(
+      concurrent.map((response) => response.status).sort(),
+      [201, 409],
+    );
+    const capped = await pool.query(
+      "SELECT count(*)::int AS total FROM pt_tenders WHERE workspace_hash=$1",
+      [hashes[0]],
+    );
+    assert.equal(capped.rows[0].total, 500);
     console.log(
-      "API integration passed: persistence, seed-once, workspace isolation, cookie flags, request guards, and public-field boundary.",
+      "API integration passed: persistence, seed-once, workspace isolation, cookie flags, request guards, public-field boundary, and concurrent 500-record cap.",
     );
   } finally {
     // Only workspaces created by this test are removed; cascade deletes their fictional tenders.
