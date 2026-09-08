@@ -266,7 +266,7 @@
   top: 12px;
   color: var(--muted);
 }
-.search-input {
+.search-wrap .search-input {
   padding: 10px 12px 10px 35px;
   font-size: 11px;
 }
