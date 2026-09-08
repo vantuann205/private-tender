@@ -1,5 +1,9 @@
 # PrivateTender
 
+[Live hosted prototype](https://private-tender-ten.vercel.app) · Vercel production · Neon PostgreSQL (Singapore)
+
+The website is deployed; Midnight proof generation and contract deployment remain prototype work, as described below.
+
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
 **Current progress: ~25%**
