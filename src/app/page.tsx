@@ -1,1 +1,2 @@
-export default function Home() { return <main><h1>PrivateTender</h1><p>Procurement, with discretion.</p></main>; }
+import { TenderBoard } from "@/features/tenders/tender-board";
+export default function Home() { return <TenderBoard />; }
