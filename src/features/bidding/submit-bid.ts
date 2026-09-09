@@ -1,5 +1,14 @@
 import { tenderStatus, type Tender } from "../tenders/domain";
 import type { EligibilityResult } from "../vendors/eligibility";
+import { refreshTenders, getTenders, getStorageError } from "../tenders/storage";
+export async function submitCurrentDemoBid(id: string, proof: EligibilityResult | null, amount: string): Promise<BidReceipt> {
+  // Refresh only public records. The fictional amount never leaves this browser.
+  await refreshTenders();
+  if (getStorageError()) throw new Error("Cannot verify current tender state. Reload and try again.");
+  const tender = getTenders()?.find((item) => item.id === id);
+  if (!tender) throw new Error("Tender is no longer available in this workspace.");
+  return submitDemoBid(tender, proof, amount);
+}
 export type BidReceipt = {
   id: string;
   tenderId: string;

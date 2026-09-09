@@ -5,7 +5,7 @@ import { Icon } from "@/components/icon";
 import { tenderStatus } from "@/features/tenders/domain";
 import { useTenders } from "@/features/tenders/use-tenders";
 import { StatusBadge } from "@/features/tenders/tender-meta";
-import { submitDemoBid, type BidReceipt } from "@/features/bidding/submit-bid";
+import { submitCurrentDemoBid, type BidReceipt } from "@/features/bidding/submit-bid";
 import { proveEligibility, type EligibilityResult } from "./eligibility";
 export function ParticipationScreen({ id }: { id: string }) {
   const { tenders, error: databaseError } = useTenders();
@@ -14,6 +14,7 @@ export function ParticipationScreen({ id }: { id: string }) {
   const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState<BidReceipt | null>(null);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   if (!tenders) return <p role="status">Loading vendor participation…</p>;
   const tender = tenders.find((t) => t.id === id);
   if (!tender)
@@ -37,14 +38,18 @@ export function ParticipationScreen({ id }: { id: string }) {
       );
     }
   }
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setError("");
     try {
-      setReceipt(submitDemoBid(tender!, proof, amount));
+      setReceipt(await submitCurrentDemoBid(id, proof, amount));
       setAmount("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bid simulation failed.");
+    } finally {
+      setSubmitting(false);
     }
   }
   return (
@@ -175,7 +180,7 @@ export function ParticipationScreen({ id }: { id: string }) {
                   maxLength={14}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  disabled={!proof?.eligible || !open}
+                  disabled={submitting || !proof?.eligible || !open}
                   aria-describedby="amount-help"
                 />
                 <small id="amount-help">
@@ -192,9 +197,9 @@ export function ParticipationScreen({ id }: { id: string }) {
               </div>
               <button
                 className="button"
-                disabled={!proof?.eligible || !open || !amount}
+                disabled={submitting || !proof?.eligible || !open || !amount}
               >
-                Submit demo bid
+                {submitting ? "Checking tender…" : "Submit demo bid"}
               </button>
             </form>
           )}

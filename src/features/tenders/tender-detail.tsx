@@ -6,8 +6,25 @@ import { useTenders } from "./use-tenders";
 import { StatusBadge, TenderDate } from "./tender-meta";
 import { tenderStatus } from "./domain";
 import { CreateTenderForm } from "./create-tender-form";
+import { mutateTender, refreshTenders } from "./storage";
 export function TenderDetail({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [mutationError, setMutationError] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
+  async function transition(action: "publish" | "close") {
+    if (pending) return;
+    setPending(true);
+    setMutationError("");
+    try {
+      await mutateTender({ id, action });
+      setConfirmClose(false);
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : "Tender update failed. Reload and try again.");
+    } finally {
+      setPending(false);
+    }
+  }
   const { tenders, error } = useTenders();
   if (!tenders) return <p role="status">Loading tender…</p>;
   const tender = tenders.find((t) => t.id === id);
@@ -40,9 +57,10 @@ export function TenderDetail({ id }: { id: string }) {
         </div>
         <div>
           <StatusBadge tender={tender} />
-          {status === "Draft" && <button className="button secondary" onClick={() => setEditing(true)}>Edit draft</button>}
+          {status === "Draft" && <button className="button secondary" disabled={pending} onClick={() => setEditing(true)}>Edit draft</button>}
         </div>
       </div>
+      {mutationError && <div role="alert" className="error-banner">{mutationError} <button type="button" className="button secondary" disabled={pending} onClick={() => void refreshTenders()}>Reload tender</button></div>}
       <div className="detail-grid">
         <div className="panel detail-content">
           <h2>Scope of work</h2>
@@ -69,6 +87,16 @@ export function TenderDetail({ id }: { id: string }) {
           </section>
         </div>
         <aside className="detail-aside">
+          <div className="panel participation-panel">
+            <h2>Manage tender</h2>
+            <p>{status === "Draft" ? "Publish when ready. Once opened, tender details cannot be edited." : "Opened tender details are locked. Closed tenders cannot reopen."}</p>
+            {status === "Draft" && <button className="button" disabled={pending} onClick={() => void transition("publish")}>{pending ? "Publishing…" : "Publish tender"}</button>}
+            {status === "Open" && (confirmClose ? <div>
+              <p>Close bidding now? This cannot be undone.</p>
+              <button className="button" disabled={pending} onClick={() => void transition("close")}>{pending ? "Closing…" : "Confirm close"}</button>
+              <button className="button secondary" disabled={pending} onClick={() => setConfirmClose(false)}>Cancel</button>
+            </div> : <button className="button secondary" disabled={pending} onClick={() => setConfirmClose(true)}>Close tender</button>)}
+          </div>
           <div className="panel participation-panel">
             <span className="icon-block">
               <Icon name="file" size={24} />
@@ -109,7 +137,7 @@ export function TenderDetail({ id }: { id: string }) {
               <p className="notice">
                 {status === "Draft"
                   ? "This draft is not accepting bids."
-                  : "The deadline has passed. Bid entry is disabled."}
+                  : "This tender is closed. Bid entry is disabled."}
               </p>
             )}
           </div>

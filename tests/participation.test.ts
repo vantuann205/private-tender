@@ -1,5 +1,25 @@
 import test from "node:test";
+import { submitCurrentDemoBid } from "../src/features/bidding/submit-bid";
 import assert from "node:assert/strict";
+test("bid simulation rechecks persisted state without transmitting its amount", async () => {
+  const originalFetch = globalThis.fetch;
+  let status = "Closed";
+  const tender = { id: "stale-tender", title: "Tender", description: "Scope", requirements: ["Registered"], deadline: new Date(Date.now() + 86400000).toISOString(), winnerRule: "Lowest eligible bid", status: "Open" as const, organization: "Demo", category: "General", createdAt: new Date().toISOString() };
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, "/api/tenders");
+    assert.equal(options?.body, undefined);
+    return status === "unavailable" ? Response.json({}, { status: 503 }) : Response.json({ tenders: [{ ...tender, status }] });
+  };
+  try {
+    const proof = proveEligibility(tender, true);
+    await assert.rejects(submitCurrentDemoBid(tender.id, proof, "123.45"));
+    status = "Open";
+    const receipt = await submitCurrentDemoBid(tender.id, proof, "123.45");
+    assert.equal("amount" in receipt, false);
+    status = "unavailable";
+    await assert.rejects(submitCurrentDemoBid(tender.id, proof, "123.45"));
+  } finally { globalThis.fetch = originalFetch; }
+});
 import { seedTenders } from "../src/features/tenders/seed";
 import { proveEligibility } from "../src/features/vendors/eligibility";
 import { submitDemoBid } from "../src/features/bidding/submit-bid";
