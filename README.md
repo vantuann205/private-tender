@@ -6,7 +6,7 @@ The website is deployed; Midnight proof generation and contract deployment remai
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
-**Current progress: ~25%**
+**Estimated prototype progress: ~30%** (qualitative scope estimate, not a measured completion rate).
 
 This first development pass is a database-backed prototype, not a deployed auction or a production-private bidding system. Neon PostgreSQL now persists public tender records; eligibility and bids remain local simulations.
 
@@ -15,8 +15,9 @@ This first development pass is a database-backed prototype, not a deployed aucti
 - Responsive procurement workspace with tender board, search, status filters, detail, creation, and vendor participation routes.
 - Public tender model: title, description, eligibility requirements, bidding deadline, winner rule, and Draft/Open/Closed status.
 - PostgreSQL-persisted demo tenders isolated by anonymous browser workspace. Creation validates required fields, lengths, supported rules, and future deadlines on both client and server. Open tenders derive Closed at their deadline.
+- Draft editing reuses the creation form; publishing opens a draft, and confirmed early closure permanently closes an open tender. Server-side workspace ownership and row locks protect each mutation. Opened contents are immutable and closed tenders cannot reopen.
 - Development eligibility adapter with eligible/ineligible states and tender binding.
-- Bid input simulation that rechecks eligibility, current deadline, and decimal amount before returning an amount-free local receipt.
+- Bid input simulation that refreshes public tender state, then rechecks eligibility, current deadline, and decimal amount before returning an amount-free local receipt. Amounts are never included in that read request; unavailable/closed tenders fail closed.
 - Domain/client/API-boundary tests, an opt-in real-database API integration check, and a compile-checked Compact foundation.
 
 ## Privacy model and limitations
@@ -31,7 +32,9 @@ Each workspace is capped at 500 tenders, with a workspace-row lock preventing co
 
 Sample tender deadlines are generated on the first visit and then persisted, so they naturally close as time passes. Deadlines are entered in browser-local time, saved as ISO timestamps, and shown in UTC on detail screens. The display refreshes on navigation/state changes, while submission always rechecks the current time. The browser clock is not an authoritative blockchain clock.
 
-Drafts can be created and viewed, but draft editing/publishing is not in this pass. Winner rules are recorded only; no winner is selected.
+Drafts can be edited and published from their detail screen. Both saving and publishing require a future deadline checked by the server. Open tenders may be closed early after confirmation. Content cannot change after opening; neither reopening nor deleting is implemented. Every edit/publish/close locks and reads the workspace-owned database row before applying a change, so simultaneous lifecycle requests cannot both succeed. Concurrent draft edits are serialized with the last accepted edit winning; revision history and edit merging are not implemented. Winner rules are recorded only; no winner is selected.
+
+The participation refresh is a best-effort simulation check, not an atomic bid acceptance or an authoritative blockchain clock. A closure after the public read can still race with the local receipt; real bids will require server/contract-side atomic acceptance. No real bid is accepted here.
 
 ## Stack and organization
 
@@ -80,18 +83,18 @@ corepack pnpm start
 
 The initial schema is in `drizzle/0000_initial_workspace_tenders.sql`; `db:migrate` uses Drizzle’s migration journal and is safe to repeat. `db:generate` generates the next migration after a schema change. Run migrations on a development Neon branch before production.
 
-For opt-in integration testing, migrate a disposable/test database, start the app against that same database, then run `corepack pnpm test:api` with `DATABASE_URL` and `TEST_BASE_URL` (defaults to `http://localhost:3111`). It checks persistence across requests, seed-once behavior, two-workspace isolation, cookie flags, mutation guards, database-scoped records, and concurrent enforcement of the 500-record cap; it deletes only the fictional workspaces it created. It intentionally fails if database configuration is missing rather than silently reporting success.
+For opt-in integration testing, migrate a disposable/test database, start the app against that same database, then run `corepack pnpm test:api` with `DATABASE_URL` and `TEST_BASE_URL` (defaults to `http://localhost:3111`). It checks persistence across requests, seed-once behavior, two-workspace isolation, cookie flags, mutation guards, draft editing, expired-draft publication rejection, post-open immutability, concurrent publish/close, and concurrent enforcement of the 500-record cap; it deletes only the fictional workspaces it created. It intentionally fails if database configuration is missing rather than silently reporting success.
 
 `lint` uses a supported Next.js flat config with ESLint 9; the upstream package currently emits a deprecation notice on installation, but lint is clean. A future tooling upgrade can move to ESLint 10 once the Next.js peer range supports it.
 
 ## Demonstration path
 
 1. Open `/`; filter or search the four sample tenders.
-2. Open `/tenders/new`; create an Open tender with a future deadline. Reload its detail page to check persistence.
+2. Open `/tenders/new`; create a Draft tender with a future deadline. Edit its details, save, and reload to check persistence. Select **Publish tender** to open participation and lock the details.
 3. Select **Participate in tender**. Click **Prove Eligibility** without checking the box to see Not eligible.
 4. Check the self-attestation box, then **Prove Eligibility**. Enter a fictional amount and select **Submit demo bid**.
 5. Verify the amount-free local receipt, then return to the board. No amount is published or persisted.
-6. Draft and Closed samples do not permit participation. `/privacy` explains all trust boundaries.
+6. Use **Close tender**, then **Confirm close** to end bidding early; reload to verify closure. Draft and Closed tenders do not permit participation or reopening. `/privacy` explains all trust boundaries.
 
 Use a different browser profile for a second isolated workspace. Clearing the workspace cookie starts fresh samples but does not delete old database records. Do not clear it if you need continued access.
 
