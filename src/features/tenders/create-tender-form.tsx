@@ -3,10 +3,10 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
-import { validateTender, WINNER_RULES, type TenderInput } from "./domain";
-import { createTender } from "./storage";
+import { validateTender, WINNER_RULES, type TenderInput, type Tender } from "./domain";
+import { createTender, mutateTender } from "./storage";
 import { useTenders } from "./use-tenders";
-export function CreateTenderForm() {
+export function CreateTenderForm({ tender, onSaved, onCancel }: { tender?: Tender; onSaved?: () => void; onCancel?: () => void } = {}) {
   const router = useRouter();
   const { tenders, error: storageError } = useTenders();
   const [errors, setErrors] = useState<
@@ -23,7 +23,7 @@ export function CreateTenderForm() {
       requirements: String(data.get("requirements") || ""),
       deadline: String(data.get("deadline") || ""),
       winnerRule: String(data.get("winnerRule") || ""),
-      status: data.get("status") === "Draft" ? "Draft" : "Open",
+      status: tender || data.get("status") === "Draft" ? "Draft" : "Open",
     };
     const invalid = validateTender(input);
     setErrors(invalid);
@@ -31,10 +31,13 @@ export function CreateTenderForm() {
     setSaving(true);
     setError("");
     try {
-      router.push(`/tenders/${(await createTender(input)).id}`);
-    } catch {
+      if (tender) {
+        await mutateTender({ id: tender.id, action: "edit", input });
+        onSaved?.();
+      } else router.push(`/tenders/${(await createTender(input)).id}`);
+    } catch (e) {
       setError(
-        "The tender could not be saved. Check your connection and the workspace limit, then try again. Your form entries are still here.",
+        e instanceof Error ? e.message : "The tender could not be saved. Your form entries are still here. Reload and try again.",
       );
       setSaving(false);
     }
@@ -46,7 +49,7 @@ export function CreateTenderForm() {
       </Link>
       <div className="page-heading">
         <div>
-          <h1>Create a tender</h1>
+          <h1>{tender ? "Edit draft" : "Create a tender"}</h1>
           <p>Set clear expectations before the first bid arrives.</p>
         </div>
       </div>
@@ -83,6 +86,7 @@ export function CreateTenderForm() {
                   <input
                     id={name}
                     name={name}
+                    defaultValue={tender?.title}
                     placeholder={placeholder}
                     maxLength={120}
                     required
@@ -93,6 +97,7 @@ export function CreateTenderForm() {
                   <textarea
                     id={name}
                     name={name}
+                    defaultValue={name === "requirements" ? tender?.requirements.join("\n") : tender?.description}
                     placeholder={placeholder}
                     rows={name === "description" ? 4 : 3}
                     maxLength={3000}
@@ -112,6 +117,7 @@ export function CreateTenderForm() {
                 type="datetime-local"
                 id="deadline"
                 name="deadline"
+                defaultValue={tender ? new Date(Date.parse(tender.deadline) - new Date(tender.deadline).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : undefined}
                 required
                 aria-invalid={!!errors.deadline}
                 aria-describedby="deadline-error"
@@ -121,17 +127,17 @@ export function CreateTenderForm() {
                 {errors.deadline}
               </span>
             </div>
-            <div className="field">
+            {!tender && <div className="field">
               <label htmlFor="status">Initial status</label>
               <select id="status" name="status">
                 <option>Open</option>
                 <option>Draft</option>
               </select>
               <small>Draft tenders do not accept bids.</small>
-            </div>
+            </div>}
             <div className="field full">
               <label htmlFor="winnerRule">Winner-selection rule</label>
-              <select id="winnerRule" name="winnerRule">
+              <select id="winnerRule" name="winnerRule" defaultValue={tender?.winnerRule}>
                 {WINNER_RULES.map((rule) => (
                   <option key={rule}>{rule}</option>
                 ))}
@@ -147,14 +153,14 @@ export function CreateTenderForm() {
             </p>
           )}
           <div className="form-actions">
-            <Link className="button secondary" href="/">
+            {onCancel ? <button type="button" className="button secondary" onClick={onCancel} disabled={saving}>Cancel</button> : <Link className="button secondary" href="/">
               Cancel
-            </Link>
+            </Link>}
             <button
               className="button"
               disabled={saving || !tenders || !!storageError}
             >
-              {saving ? "Saving…" : "Create tender"}
+              {saving ? "Saving…" : tender ? "Save draft" : "Create tender"}
             </button>
           </div>
         </form>

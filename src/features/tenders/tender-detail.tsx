@@ -1,10 +1,13 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { useTenders } from "./use-tenders";
 import { StatusBadge, TenderDate } from "./tender-meta";
 import { tenderStatus } from "./domain";
+import { CreateTenderForm } from "./create-tender-form";
 export function TenderDetail({ id }: { id: string }) {
+  const [editing, setEditing] = useState(false);
   const { tenders, error } = useTenders();
   if (!tenders) return <p role="status">Loading tender…</p>;
   const tender = tenders.find((t) => t.id === id);
@@ -21,6 +24,8 @@ export function TenderDetail({ id }: { id: string }) {
       </div>
     );
   const status = tenderStatus(tender);
+  if (editing && status === "Draft")
+    return <CreateTenderForm tender={tender} onSaved={() => setEditing(false)} onCancel={() => setEditing(false)} />;
   return (
     <>
       <Link className="back-link" href="/">
@@ -33,7 +38,10 @@ export function TenderDetail({ id }: { id: string }) {
             {tender.organization} · {tender.category}
           </p>
         </div>
-        <StatusBadge tender={tender} />
+        <div>
+          <StatusBadge tender={tender} />
+          {status === "Draft" && <button className="button secondary" onClick={() => setEditing(true)}>Edit draft</button>}
+        </div>
       </div>
       <div className="detail-grid">
         <div className="panel detail-content">
