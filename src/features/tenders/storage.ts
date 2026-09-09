@@ -1,4 +1,4 @@
-import { type Tender, type TenderInput, validateTender } from "./domain";
+import { type Tender, type TenderInput, type TenderMutation, validateTender } from "./domain";
 let snapshot: Tender[] | null = null;
 let storageError = "";
 let request: Promise<void> | null = null;
@@ -103,6 +103,28 @@ export async function createTender(input: TenderInput): Promise<Tender> {
   const data = await response.json();
   const [tender] = decodeTenders(JSON.stringify([data.tender]));
   snapshot = [tender, ...(snapshot ?? [])];
+  storageError = "";
+  listeners.forEach((notify) => notify());
+  return tender;
+}
+export async function mutateTender(mutation: TenderMutation): Promise<Tender> {
+  if (request) await request;
+  const body = mutation.action === "edit" ? {
+    ...mutation,
+    input: { ...mutation.input, deadline: new Date(mutation.input.deadline).toISOString() },
+  } : mutation;
+  const response = await fetch("/api/tenders", {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error(typeof data.error === "string" ? data.error : "Tender could not be updated. Reload and try again.");
+  const [tender] = decodeTenders(JSON.stringify([data.tender]));
+  snapshot = [tender, ...(snapshot ?? []).filter((item) => item.id !== tender.id)];
   storageError = "";
   listeners.forEach((notify) => notify());
   return tender;

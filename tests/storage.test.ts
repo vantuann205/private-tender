@@ -6,6 +6,7 @@ import {
   getTenders,
   getStorageError,
   createTender,
+  mutateTender,
 } from "../src/features/tenders/storage";
 import { seedTenders } from "../src/features/tenders/seed";
 test("public API records reject malformed state and strip private extra fields", () => {
@@ -23,6 +24,29 @@ test("public API records reject malformed state and strip private extra fields",
     JSON.stringify([{ ...seedTenders()[0], deadline: "invalid" }]),
   ])
     assert.throws(() => decodeTenders(raw));
+});
+test("mutations replace the server record and preserve the last snapshot on rejection", async () => {
+  const originalFetch = globalThis.fetch;
+  const seed = seedTenders();
+  let status = 200;
+  globalThis.fetch = async (_url, options) => {
+    if (options?.method !== "PATCH") return Response.json({ tenders: seed });
+    assert.deepEqual(JSON.parse(String(options.body)), { id: seed[0].id, action: "close" });
+    assert.equal(options.credentials, "same-origin");
+    return Response.json(status === 200 ? { tender: { ...seed[0], status: "Closed" } } : { error: "Reload tender state." }, { status });
+  };
+  try {
+    await refreshTenders();
+    const closed = await mutateTender({ id: seed[0].id, action: "close" });
+    assert.equal(closed.status, "Closed");
+    assert.equal(getTenders()?.length, 4);
+    assert.equal(getTenders()?.find((t) => t.id === seed[0].id)?.status, "Closed");
+    status = 409;
+    await assert.rejects(mutateTender({ id: seed[0].id, action: "close" }), /Reload tender state/);
+    assert.equal(getTenders()?.find((t) => t.id === seed[0].id)?.status, "Closed");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 test("client uses server results, preserves state on rejected create, and never falls back after a database read failure", async () => {
   const originalFetch = globalThis.fetch;
