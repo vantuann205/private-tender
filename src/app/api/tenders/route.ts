@@ -4,11 +4,13 @@ import {
   workspaceIdentity,
   assertSameOrigin,
   readTenderBody,
+  readTenderMutation,
   RequestError,
 } from "@/lib/api-security";
 import {
   listWorkspaceTenders,
   insertWorkspaceTender,
+  mutateWorkspaceTender,
 } from "@/features/tenders/repository";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +63,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { tender: await insertWorkspaceTender(identity.hash, input) },
       { status: 201, headers },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function PATCH(request: NextRequest) {
+  try {
+    assertSameOrigin(request);
+    const identity = workspaceIdentity(request.cookies.get(WORKSPACE_COOKIE)?.value);
+    if (identity.fresh)
+      throw new RequestError("Load the tender board to initialize your workspace.", 401);
+    const mutation = await readTenderMutation(request);
+    return NextResponse.json(
+      { tender: await mutateWorkspaceTender(identity.hash, mutation) },
+      { headers },
     );
   } catch (error) {
     return failure(error);

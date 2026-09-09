@@ -1,10 +1,10 @@
 import "server-only";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { getDatabase } from "../../lib/db/client";
 import { tenders, workspaces } from "../../lib/db/schema";
 import { RequestError } from "../../lib/api-security";
 import { seedTenders } from "./seed";
-import { type Tender, type TenderInput, validateTender } from "./domain";
+import { type Tender, type TenderInput, type TenderMutation, validateTender } from "./domain";
 
 function publicTender(row: typeof tenders.$inferSelect): Tender {
   return {
@@ -87,5 +87,35 @@ export async function insertWorkspaceTender(hash: string, input: TenderInput) {
       })
       .returning();
     return publicTender(created);
+  });
+}
+export async function mutateWorkspaceTender(hash: string, mutation: TenderMutation) {
+  return getDatabase().transaction(async (tx) => {
+    const owned = and(eq(tenders.workspaceHash, hash), eq(tenders.id, mutation.id));
+    // Serialize lifecycle and content changes on the owned row, including across tabs.
+    const [current] = await tx.select().from(tenders).where(owned).for("update");
+    if (!current) throw new RequestError("Tender not found in this workspace.", 404);
+    const expected = mutation.action === "close" ? "Open" : "Draft";
+    if (current.status !== expected)
+      throw new RequestError("Tender state changed. Reload before trying again. Opened tender details cannot be edited.", 409);
+    let changes: Partial<typeof tenders.$inferInsert>;
+    if (mutation.action === "edit") {
+      const input = mutation.input;
+      if (input.status !== "Draft" || Object.keys(validateTender(input)).length)
+        throw new RequestError("Check the draft fields and future deadline before saving.");
+      changes = {
+        title: input.title.trim(),
+        description: input.description.trim(),
+        requirements: input.requirements.split("\n").map((r) => r.trim()).filter(Boolean),
+        deadline: new Date(input.deadline).toISOString(),
+        winnerRule: input.winnerRule,
+      };
+    } else {
+      if (mutation.action === "publish" && Date.parse(current.deadline) <= Date.now())
+        throw new RequestError("Set a future deadline before publishing this draft.");
+      changes = { status: mutation.action === "publish" ? "Open" : "Closed" };
+    }
+    const [updated] = await tx.update(tenders).set(changes).where(owned).returning();
+    return publicTender(updated);
   });
 }

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { validateTender, type TenderInput } from "../features/tenders/domain";
+import { validateTender, type TenderInput, type TenderMutation } from "../features/tenders/domain";
 
 export class RequestError extends Error {
   constructor(
@@ -61,6 +61,27 @@ export function parseTenderInput(value: unknown): TenderInput {
   return input;
 }
 export async function readTenderBody(request: Request) {
+  return parseTenderInput(await readJsonBody(request));
+}
+export async function readTenderMutation(request: Request): Promise<TenderMutation> {
+  const value = await readJsonBody(request);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new RequestError("Invalid tender action.");
+  const body = value as Record<string, unknown>;
+  const fields = body.action === "edit" ? ["id", "action", "input"] : ["id", "action"];
+  if (typeof body.id !== "string" || !/^[a-zA-Z0-9-]{1,64}$/.test(body.id) ||
+    Object.keys(body).some((key) => !fields.includes(key)))
+    throw new RequestError("Invalid tender action fields.");
+  if (body.action === "edit") {
+    const input = parseTenderInput(body.input);
+    if (input.status !== "Draft") throw new RequestError("Edits must remain Draft. Publish separately.");
+    return { id: body.id, action: "edit", input };
+  }
+  if (body.action !== "publish" && body.action !== "close")
+    throw new RequestError("Unsupported tender action.");
+  return { id: body.id, action: body.action };
+}
+async function readJsonBody(request: Request): Promise<unknown> {
   if (
     request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
     "application/json"
@@ -93,5 +114,5 @@ export async function readTenderBody(request: Request) {
   } catch {
     throw new RequestError("Invalid JSON.");
   }
-  return parseTenderInput(body);
+  return body;
 }

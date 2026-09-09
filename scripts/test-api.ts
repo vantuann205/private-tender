@@ -37,6 +37,13 @@ async function main() {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
+  const patch = (cookie: string, body: unknown, origin = base.origin) =>
+    fetch(new URL("/api/tenders", base), {
+      method: "PATCH",
+      headers: headers(cookie, origin),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20000),
+    });
   async function workspace() {
     const response = await get();
     assert.equal(response.status, 200, "Workspace creation must succeed.");
@@ -98,8 +105,38 @@ async function main() {
       [hashes[1], tender.id],
     );
     assert.equal(hidden.rowCount, 0);
+    const draftResponse = await post(a, { ...input, status: "Draft" });
+    assert.equal(draftResponse.status, 201);
+    const draft = (await draftResponse.json()).tender;
+    const edit = { id: draft.id, action: "edit", input: { ...input, title: "Edited draft", status: "Draft" } };
+    assert.equal((await patch(b, edit)).status, 404, "Another workspace cannot edit a draft.");
+    assert.equal((await patch("", edit)).status, 401);
+    assert.equal((await patch(a, edit, "https://untrusted.invalid")).status, 403);
+    assert.equal((await patch(a, { ...edit, workspaceHash: hashes[1] })).status, 400);
+    assert.equal((await patch(a, { ...edit, input: { ...edit.input, status: "Open" } })).status, 400);
+    assert.equal((await patch(a, { ...edit, input: { ...edit.input, deadline: "2000-01-01T00:00:00Z" } })).status, 400);
+    const edited = await patch(a, edit);
+    assert.equal(edited.status, 200, "Draft editing must succeed.");
+    assert.equal((await edited.json()).tender.title, "Edited draft");
+    const publish = { id: draft.id, action: "publish" };
+    assert.equal((await patch(b, publish)).status, 404);
+    assert.equal((await patch(a, { id: draft.id, action: "close" })).status, 409);
+    await pool.query("UPDATE pt_tenders SET deadline='2000-01-01T00:00:00Z' WHERE workspace_hash=$1 AND id=$2", [hashes[0], draft.id]);
+    assert.equal((await patch(a, publish)).status, 400, "Expired drafts cannot publish.");
+    assert.equal((await patch(a, edit)).status, 200);
+    const publishing = await Promise.all([patch(a, publish), patch(a, publish)]);
+    assert.deepEqual(publishing.map((response) => response.status).sort(), [200, 409]);
+    assert.equal((await patch(a, edit)).status, 409, "Opened contents are immutable.");
+    assert.equal((await patch(b, { id: draft.id, action: "close" })).status, 404);
+    const closing = await Promise.all([patch(a, { id: draft.id, action: "close" }), patch(a, { id: draft.id, action: "close" })]);
+    assert.deepEqual(closing.map((response) => response.status).sort(), [200, 409]);
+    assert.equal((await patch(a, publish)).status, 409, "Closed tenders cannot reopen.");
+    assert.equal((await patch(a, edit)).status, 409);
+    const finalDraft = (await (await get(a)).json()).tenders.find((row: { id: string }) => row.id === draft.id);
+    assert.equal(finalDraft.status, "Closed");
+    assert.equal(finalDraft.title, "Edited draft");
     await pool.query(
-      "INSERT INTO pt_tenders (workspace_hash,id,title,description,requirements,deadline,winner_rule,status,organization,category,created_at) SELECT workspace_hash, 'cap-check-' || n::text,title,description,requirements,deadline,winner_rule,status,organization,category,created_at FROM pt_tenders CROSS JOIN generate_series(1,494) AS n WHERE workspace_hash=$1 AND id=$2",
+      "INSERT INTO pt_tenders (workspace_hash,id,title,description,requirements,deadline,winner_rule,status,organization,category,created_at) SELECT workspace_hash, 'cap-check-' || n::text,title,description,requirements,deadline,winner_rule,status,organization,category,created_at FROM pt_tenders CROSS JOIN generate_series(1,493) AS n WHERE workspace_hash=$1 AND id=$2",
       [hashes[0], tender.id],
     );
     const concurrent = await Promise.all([post(a, input), post(a, input)]);
@@ -113,7 +150,7 @@ async function main() {
     );
     assert.equal(capped.rows[0].total, 500);
     console.log(
-      "API integration passed: persistence, seed-once, workspace isolation, cookie flags, request guards, public-field boundary, and concurrent 500-record cap.",
+      "API integration passed: persistence, seed-once, workspace isolation, cookie flags, request guards, public-field boundary, draft editing, lifecycle/deadline guards, concurrent publish/close, and concurrent 500-record cap.",
     );
   } finally {
     // Only workspaces created by this test are removed; cascade deletes their fictional tenders.

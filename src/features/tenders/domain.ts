@@ -18,6 +18,9 @@ export type Tender = Omit<TenderInput, "requirements"> & {
   category: string;
   createdAt: string;
 };
+export type TenderMutation =
+  | { id: string; action: "edit"; input: TenderInput }
+  | { id: string; action: "publish" | "close" };
 export function validateTender(
   input: TenderInput,
   now = Date.now(),
