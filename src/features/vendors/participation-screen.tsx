@@ -120,17 +120,17 @@ export function ParticipationScreen({ id }: { id: string }) {
           </button>
           <div
             role="status"
-            className={`eligibility-result ${proof?.eligible ? "eligible" : ""}`}
+            className={`eligibility-result ${open && proof?.eligible ? "eligible" : ""}`}
           >
             <strong>
-              {proof
+              {!open ? "Eligibility: Unavailable" : proof
                 ? proof.eligible
                   ? "Eligibility: Verified (demo)"
                   : "Eligibility: Not eligible"
                 : "Eligibility: Not checked"}
             </strong>
             <p>
-              {proof
+              {!open ? "Participation is unavailable because this tender is not open." : proof
                 ? proof.eligible
                   ? "You can continue to the local bid simulation."
                   : "Only vendors meeting every requirement can continue."

@@ -119,6 +119,8 @@ async function main() {
     assert.equal(edited.status, 200, "Draft editing must succeed.");
     assert.equal((await edited.json()).tender.title, "Edited draft");
     const publish = { id: draft.id, action: "publish" };
+    for (const invalid of [null, [], { ...publish, action: "reopen" }, { ...publish, amount: "123" }, { ...publish, input }, { ...publish, id: "" }])
+      assert.equal((await patch(a, invalid)).status, 400, "Malformed lifecycle requests must fail.");
     assert.equal((await patch(b, publish)).status, 404);
     assert.equal((await patch(a, { id: draft.id, action: "close" })).status, 409);
     await pool.query("UPDATE pt_tenders SET deadline='2000-01-01T00:00:00Z' WHERE workspace_hash=$1 AND id=$2", [hashes[0], draft.id]);
@@ -135,8 +137,19 @@ async function main() {
     const finalDraft = (await (await get(a)).json()).tenders.find((row: { id: string }) => row.id === draft.id);
     assert.equal(finalDraft.status, "Closed");
     assert.equal(finalDraft.title, "Edited draft");
+    const racingDraft = (await (await post(a, { ...input, status: "Draft" })).json()).tender;
+    const [racingEdit, racingPublish] = await Promise.all([
+      patch(a, { ...edit, id: racingDraft.id }),
+      patch(a, { id: racingDraft.id, action: "publish" }),
+    ]);
+    assert.equal(racingPublish.status, 200);
+    assert.ok([200, 409].includes(racingEdit.status));
+    const raced = (await (await get(a)).json()).tenders.find((row: { id: string }) => row.id === racingDraft.id);
+    assert.equal(raced.status, "Open");
+    assert.equal(raced.title, racingEdit.status === 200 ? "Edited draft" : "API isolation check");
+    assert.equal((await patch(a, { ...edit, id: racingDraft.id })).status, 409);
     await pool.query(
-      "INSERT INTO pt_tenders (workspace_hash,id,title,description,requirements,deadline,winner_rule,status,organization,category,created_at) SELECT workspace_hash, 'cap-check-' || n::text,title,description,requirements,deadline,winner_rule,status,organization,category,created_at FROM pt_tenders CROSS JOIN generate_series(1,493) AS n WHERE workspace_hash=$1 AND id=$2",
+      "INSERT INTO pt_tenders (workspace_hash,id,title,description,requirements,deadline,winner_rule,status,organization,category,created_at) SELECT workspace_hash, 'cap-check-' || n::text,title,description,requirements,deadline,winner_rule,status,organization,category,created_at FROM pt_tenders CROSS JOIN generate_series(1,492) AS n WHERE workspace_hash=$1 AND id=$2",
       [hashes[0], tender.id],
     );
     const concurrent = await Promise.all([post(a, input), post(a, input)]);
