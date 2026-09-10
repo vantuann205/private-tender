@@ -16,9 +16,9 @@ function tender(deadline = 1000n) {
   return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n }, '00'.repeat(32)), deadline, new Uint8Array(32));
 }
 
-function call(state, circuit, time = 900n, overrides = {}) {
+function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0) {
   const transactionContext = new runtime.QueryContext(state.currentContractState.data, runtime.dummyContractAddress());
-  transactionContext.block = { secondsSinceEpoch: time, secondsSinceEpochErr: 0, blockHash: '00'.repeat(32) };
+  transactionContext.block = { secondsSinceEpoch: time, secondsSinceEpochErr: uncertainty, blockHash: '00'.repeat(32) };
   const result = contract.circuits[circuit]({
     originalState: state.currentContractState,
     currentPrivateState: { ...state.currentPrivateState, ...overrides },
@@ -61,3 +61,46 @@ for (const time of [1000n, 1001n]) {
     assert.throws(() => call(tender(), 'openTender', time), /deadline/i);
   });
 }
+
+test('the public owner commitment does not grant owner authority', () => {
+  const state = tender();
+  const secret = ledger(state.currentContractState.data).ownerCommitment;
+  assert.throws(() => call(state, 'openTender', 900n, { secret }), /owner/i);
+  assert.throws(() => call(call(state, 'openTender'), 'closeTender', 1001n, { secret }), /owner/i);
+});
+
+test('bids require an open tender and cannot land at or after its deadline', () => {
+  assert.throws(() => call(tender(), 'submitPrivateBidConcept'), /not open/i);
+  const state = call(tender(), 'openTender');
+  for (const time of [1000n, 1001n]) {
+    assert.throws(() => call(state, 'submitPrivateBidConcept', time), /deadline/i);
+  }
+  assert.equal(ledger(call(state, 'submitPrivateBidConcept', 999n).currentContractState.data).submissionCount, 1n);
+});
+
+test('ineligible or zero bids leave participation unchanged', () => {
+  const state = call(tender(), 'openTender');
+  assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, { eligible: false }), /eligibility/i);
+  assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, { amount: 0n }), /positive/i);
+  assert.equal(ledger(state.currentContractState.data).submissionCount, 0n);
+});
+
+test('closing requires strictly past deadline and lifecycle cannot replay', () => {
+  const state = call(tender(), 'openTender');
+  assert.throws(() => call(tender(), 'closeTender', 1001n), /not open/i);
+  assert.throws(() => call(state, 'openTender'), /draft/i);
+  for (const time of [999n, 1000n]) assert.throws(() => call(state, 'closeTender', time), /deadline/i);
+  const closed = call(state, 'closeTender', 1001n);
+  assert.throws(() => call(closed, 'closeTender', 1002n), /not open/i);
+  assert.throws(() => call(closed, 'openTender', 1002n), /draft/i);
+  assert.throws(() => call(closed, 'submitPrivateBidConcept', 1002n), /not open/i);
+});
+
+test('pinned runtime compares supplied block time despite nonzero uncertainty', () => {
+  // Characterizes the real 0.3.0 query runtime, not network validity-window enforcement.
+  const state = call(tender(), 'openTender', 999n, {}, 2);
+  assert.equal(ledger(call(state, 'submitPrivateBidConcept', 999n, {}, 2).currentContractState.data).submissionCount, 1n);
+  assert.throws(() => call(state, 'submitPrivateBidConcept', 1000n, {}, 2), /deadline/i);
+  assert.throws(() => call(state, 'closeTender', 1000n, {}, 2), /deadline/i);
+  assert.equal(ledger(call(state, 'closeTender', 1001n, {}, 2).currentContractState.data).status, TenderStatus.Closed);
+});
