@@ -39,3 +39,15 @@ test('compiled lifecycle records participation and closes after deadline', () =>
   state = call(state, 'closeTender', 1001n);
   assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Closed);
 });
+
+test('only the constructor secret holder can open a tender', () => {
+  const state = tender();
+  assert.throws(() => call(state, 'openTender', 900n, { secret: stranger }), /owner/i);
+  assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Draft);
+});
+
+test('only the constructor secret holder can close a tender', () => {
+  const state = call(tender(), 'openTender');
+  assert.throws(() => call(state, 'closeTender', 1001n, { secret: stranger }), /owner/i);
+  assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Open);
+});

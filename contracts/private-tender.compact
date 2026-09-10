@@ -2,7 +2,7 @@ pragma language_version >= 0.18.0 && < 0.19.0;
 
 import CompactStandardLibrary;
 
-// FIRST-PASS CONCEPT ONLY. No credential authority, owner authorization,
+// FIRST-PASS CONCEPT ONLY. No credential authority,
 // bid commitment, uniqueness, escrow, or winner algorithm. Do not deploy.
 // One contract instance represents one tender; metadata stays off-chain.
 export enum TenderStatus { Draft, Open, Closed }
@@ -10,18 +10,31 @@ export ledger status: TenderStatus;
 export ledger deadline: Uint<64>;
 export ledger requirementsDigest: Bytes<32>;
 export ledger submissionCount: Counter;
+export ledger ownerCommitment: Bytes<32>;
+
+witness ownerSecret(): Bytes<32>;
+
+circuit ownerIdentity(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "private-tender:owner:v1"), secret]);
+}
+
+circuit assertOwner(): [] {
+  assert(ownerIdentity(ownerSecret()) == ownerCommitment, "Only the tender owner is authorized");
+}
 
 // These witnesses are untrusted self-attestation placeholders, not credentials.
 witness meetsRequirements(): Boolean;
 witness privateBidAmount(): Uint<64>;
 
 constructor(deadlineSeconds: Uint<64>, requirementsHash: Bytes<32>) {
+  ownerCommitment = disclose(ownerIdentity(ownerSecret()));
   deadline = disclose(deadlineSeconds);
   requirementsDigest = disclose(requirementsHash);
   status = TenderStatus.Draft;
 }
 
 export circuit openTender(): [] {
+  assertOwner();
   assert(status == TenderStatus.Draft, "Tender must be a draft");
   status = TenderStatus.Open;
 }
@@ -37,6 +50,7 @@ export circuit submitPrivateBidConcept(): [] {
 }
 
 export circuit closeTender(): [] {
+  assertOwner();
   assert(status == TenderStatus.Open, "Tender is not open");
   assert(kernel.blockTimeGreaterThan(deadline), "Deadline has not passed");
   status = TenderStatus.Closed;
