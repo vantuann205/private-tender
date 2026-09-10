@@ -51,3 +51,13 @@ test('only the constructor secret holder can close a tender', () => {
   assert.throws(() => call(state, 'closeTender', 1001n, { secret: stranger }), /owner/i);
   assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Open);
 });
+
+test('creation rejects a zero deadline', () => {
+  assert.throws(() => tender(0n), /deadline/i);
+});
+
+for (const time of [1000n, 1001n]) {
+  test(`opening rejects deadline reached at ${time}`, () => {
+    assert.throws(() => call(tender(), 'openTender', time), /deadline/i);
+  });
+}
