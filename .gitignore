@@ -9,6 +9,7 @@ out/
 .env*
 !.env.example
 coverage/
+.compact-generated/
 playwright-report/
 test-results/
 
