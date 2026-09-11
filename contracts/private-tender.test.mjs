@@ -173,3 +173,41 @@ test('nullifier and commitment bind contract address and tender requirements', (
     assert.notDeepEqual(changed[1], original[1]);
   }
 });
+
+test('public ledger and transcript omit raw bid amount, vendor secret, and salt', () => {
+  const amount = 0x123456789abcdef0n;
+  const { currentContractState, result } = call(call(tender(), 'openTender'), 'submitPrivateBidConcept', 900n, { amount });
+  const publicData = JSON.stringify({
+    ledger: currentContractState.data.encode(),
+    transcript: result.proofData.publicTranscript,
+    input: result.proofData.input,
+    output: result.proofData.output,
+  }, (_, value) => value instanceof Uint8Array ? Buffer.from(value).toString('hex') : typeof value === 'bigint' ? value.toString() : value);
+  const encodedAmount = Buffer.alloc(8);
+  encodedAmount.writeBigUInt64LE(amount);
+  for (const raw of [amount.toString(), encodedAmount.toString('hex'), Buffer.from(vendor).toString('hex'), Buffer.from(salt).toString('hex')]) {
+    assert.equal(publicData.includes(raw), false, 'private fixture leaked into public runtime data');
+  }
+});
+
+test('submission transcript inserts its commitment but cannot replay after it is spent', () => {
+  const open = call(tender(), 'openTender');
+  const submitted = call(open, 'submitPrivateBidConcept');
+  const transcript = { gas: 1000000000n, effects: submitted.result.context.transactionContext.effects, program: submitted.result.proofData.publicTranscript };
+  const replay = new runtime.QueryContext(open.currentContractState.data, runtime.dummyContractAddress());
+  replay.block = { secondsSinceEpoch: 900n, secondsSinceEpochErr: 0, blockHash: '00'.repeat(32) };
+  const applied = replay.runTranscript(transcript, runtime.CostModel.dummyCostModel());
+  assert.equal(ledger(applied.state).submissionCount, 1n);
+  assert.deepEqual([...ledger(applied.state).bidCommitments], [...ledger(submitted.currentContractState.data).bidCommitments]);
+  assert.throws(() => applied.runTranscript(transcript, runtime.CostModel.dummyCostModel()));
+});
+
+test('rejected bids leave both nullifier map and participation count unchanged', () => {
+  const submitted = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const original = [...ledger(submitted.currentContractState.data).bidCommitments];
+  for (const overrides of [{ vendor: stranger, amount: 0n }, { vendor: stranger, eligible: false }, { amount: 99n }]) {
+    assert.throws(() => call(submitted, 'submitPrivateBidConcept', 900n, overrides));
+    assert.equal(ledger(submitted.currentContractState.data).submissionCount, 1n);
+    assert.deepEqual([...ledger(submitted.currentContractState.data).bidCommitments], original);
+  }
+});
