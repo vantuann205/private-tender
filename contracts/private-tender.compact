@@ -3,7 +3,7 @@ pragma language_version >= 0.18.0 && < 0.19.0;
 import CompactStandardLibrary;
 
 // FIRST-PASS CONCEPT ONLY. No credential authority,
-// bid commitment, uniqueness, escrow, or winner algorithm. Do not deploy.
+// verified vendor uniqueness, escrow, or winner algorithm. Do not deploy.
 // One contract instance represents one tender; metadata stays off-chain.
 export enum TenderStatus { Draft, Open, Closed }
 export ledger status: TenderStatus;
@@ -11,6 +11,7 @@ export ledger deadline: Uint<64>;
 export ledger requirementsDigest: Bytes<32>;
 export ledger submissionCount: Counter;
 export ledger ownerCommitment: Bytes<32>;
+export ledger bidCommitments: Map<Bytes<32>, Bytes<32>>;
 
 witness ownerSecret(): Bytes<32>;
 
@@ -25,6 +26,14 @@ circuit assertOwner(): [] {
 // These witnesses are untrusted self-attestation placeholders, not credentials.
 witness meetsRequirements(): Boolean;
 witness privateBidAmount(): Uint<64>;
+witness vendorSecret(): Bytes<32>;
+witness privateBidSalt(): Bytes<32>;
+
+struct Bid {
+  domain: Bytes<32>;
+  nullifier: Bytes<32>;
+  amount: Uint<64>;
+}
 
 constructor(deadlineSeconds: Uint<64>, requirementsHash: Bytes<32>) {
   assert(deadlineSeconds > 0, "Deadline must be positive");
@@ -45,9 +54,16 @@ export circuit submitPrivateBidConcept(): [] {
   assert(status == TenderStatus.Open, "Tender is not open");
   assert(kernel.blockTimeLessThan(deadline), "Bidding deadline passed");
   assert(meetsRequirements(), "Eligibility requirement not met");
-  assert(privateBidAmount() > 0, "Bid must be positive");
-  // Only participation count is public. Amount is not retained anywhere.
-  // Real bid commitments and credential predicates belong to the next pass.
+  const amount = privateBidAmount();
+  assert(amount > 0, "Bid must be positive");
+  const nullifier = disclose(persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "private-tender:vendor:v1"), kernel.self().bytes, requirementsDigest, vendorSecret()
+  ]));
+  assert(!bidCommitments.member(nullifier), "Vendor already submitted");
+  const commitment = persistentCommit<Bid>(Bid {
+    domain: pad(32, "private-tender:bid:v1"), nullifier: nullifier, amount: amount
+  }, privateBidSalt());
+  bidCommitments.insert(nullifier, disclose(commitment));
   submissionCount.increment(1);
 }
 

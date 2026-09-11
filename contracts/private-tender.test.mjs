@@ -6,14 +6,18 @@ import * as runtime from '@midnight-ntwrk/compact-runtime';
 const { Contract, ledger, TenderStatus } = createRequire(import.meta.url)('../.compact-generated/private-tender/contract/index.cjs');
 const owner = new Uint8Array(32).fill(1);
 const stranger = new Uint8Array(32).fill(2);
+const vendor = new Uint8Array(32).fill(3);
+const salt = new Uint8Array(32).fill(4);
 const contract = new Contract({
   ownerSecret: ({ privateState }) => [privateState, privateState.secret],
   meetsRequirements: ({ privateState }) => [privateState, privateState.eligible],
   privateBidAmount: ({ privateState }) => [privateState, privateState.amount],
+  vendorSecret: ({ privateState }) => [privateState, privateState.vendor],
+  privateBidSalt: ({ privateState }) => [privateState, privateState.salt],
 });
 
 function tender(deadline = 1000n) {
-  return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n }, '00'.repeat(32)), deadline, new Uint8Array(32));
+  return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '00'.repeat(32)), deadline, new Uint8Array(32));
 }
 
 function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0) {
@@ -116,4 +120,24 @@ test('opening transcript cannot be replayed against an expired ledger time', () 
     if (time === 999n) assert.doesNotThrow(run);
     else assert.throws(run);
   }
+});
+
+test('same vendor cannot submit again even after changing private amount and salt', () => {
+  const state = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  for (const overrides of [{}, { amount: 70n }, { salt: stranger }, { amount: 70n, salt: stranger }]) {
+    assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, overrides), /already submitted/i);
+  }
+  assert.equal(ledger(state.currentContractState.data).submissionCount, 1n);
+});
+
+test('submission retains one opaque commitment keyed by its vendor nullifier', () => {
+  const state = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const bids = ledger(state.currentContractState.data).bidCommitments;
+  assert.ok(bids, 'bid commitment ledger must exist');
+  const entries = [...bids];
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0][0].length, 32);
+  assert.equal(entries[0][1].length, 32);
+  assert.notDeepEqual(entries[0][0], vendor);
+  assert.notDeepEqual(entries[0][1], salt);
 });
