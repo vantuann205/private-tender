@@ -6,7 +6,7 @@ The website is deployed; Midnight proof generation and contract deployment remai
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
-**Estimated prototype progress: ~38%** (qualitative scope estimate, not a measured completion rate or production-readiness claim).
+**Estimated prototype progress: ~48%** (qualitative scope estimate, not a measured completion rate or production-readiness claim).
 
 This first development pass is a database-backed prototype, not a deployed auction or a production-private bidding system. Neon PostgreSQL now persists public tender records; eligibility and bids remain local simulations.
 
@@ -102,12 +102,12 @@ Use a different browser profile for a second isolated workspace. Clearing the wo
 
 `contracts/private-tender.compact` was compiled with **Compact compiler 0.26.0, language 0.18.0, `--skip-zk`**. It represents creation, status, deadline assertions, eligibility witnesses, and positive private bid input. No amount is written to public ledger state.
 
-**Prototype only:** private-secret owner authorization and deadline guards now have 12 compiled-runtime tests (`pnpm test:contract`), but eligibility remains untrusted self-attestation, bids are not retained, and no winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, owner-secret custody limitations, and the distinction between local query time and network validity.
+**Prototype only:** 20 compiled-runtime tests (`pnpm test:contract`) now cover private-secret owner authorization, deadlines, salted bid commitments, and tender-bound vendor nullifiers. Only opaque commitments are retained; duplicate submissions by the same secret are rejected even with a changed amount/salt. This is pseudonymous duplicate resistance, not one-real-vendor enforcement: fresh secrets bypass that identity assumption. Eligibility remains untrusted self-attestation, and no reveal, settlement, or winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, custody limitations, and local-runtime versus network-validation boundaries.
 
 ## Next milestones
 
 1. Trusted issuer eligibility predicates and verified organization enrollment beyond secret-possession authorization; compatible wallet/proof-server integration.
-2. Tender-bound salted commitments, private bid state, and duplicate protection with real proof tests.
+2. Durable private bid/secret/salt custody and issuer-bound vendor uniqueness; validate commitments and duplicate rejection with real proof tests.
 3. Confidential winner evaluation after the deadline and public verification of the result.
 
 Anonymous reviewers, private multicriteria scoring, dispute governance, and production settlement are intentionally excluded from this pass.
