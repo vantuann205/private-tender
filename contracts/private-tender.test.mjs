@@ -16,12 +16,12 @@ const contract = new Contract({
   privateBidSalt: ({ privateState }) => [privateState, privateState.salt],
 });
 
-function tender(deadline = 1000n) {
-  return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '00'.repeat(32)), deadline, new Uint8Array(32));
+function tender(deadline = 1000n, requirements = new Uint8Array(32)) {
+  return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '00'.repeat(32)), deadline, requirements);
 }
 
-function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0) {
-  const transactionContext = new runtime.QueryContext(state.currentContractState.data, runtime.dummyContractAddress());
+function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0, address = runtime.dummyContractAddress()) {
+  const transactionContext = new runtime.QueryContext(state.currentContractState.data, address);
   transactionContext.block = { secondsSinceEpoch: time, secondsSinceEpochErr: uncertainty, blockHash: '00'.repeat(32) };
   const result = contract.circuits[circuit]({
     originalState: state.currentContractState,
@@ -140,4 +140,36 @@ test('submission retains one opaque commitment keyed by its vendor nullifier', (
   assert.equal(entries[0][1].length, 32);
   assert.notDeepEqual(entries[0][0], vendor);
   assert.notDeepEqual(entries[0][1], salt);
+});
+
+test('a distinct vendor secret adds an entry without overwriting the first bid', () => {
+  const first = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const [key, commitment] = [...ledger(first.currentContractState.data).bidCommitments][0];
+  const second = call(first, 'submitPrivateBidConcept', 900n, { vendor: stranger });
+  const state = ledger(second.currentContractState.data);
+  assert.equal(state.submissionCount, 2n);
+  assert.equal(state.bidCommitments.size(), 2n);
+  assert.deepEqual(state.bidCommitments.lookup(key), commitment);
+});
+
+test('bid commitment binds amount and salt while nullifier is stable', () => {
+  const open = call(tender(), 'openTender');
+  const entry = (overrides) => [...ledger(call(open, 'submitPrivateBidConcept', 900n, overrides).currentContractState.data).bidCommitments][0];
+  const [nullifier, commitment] = entry({});
+  for (const overrides of [{ amount: 51n }, { salt: stranger }]) {
+    const changed = entry(overrides);
+    assert.deepEqual(changed[0], nullifier);
+    assert.notDeepEqual(changed[1], commitment);
+  }
+});
+
+test('nullifier and commitment bind contract address and tender requirements', () => {
+  const open = call(tender(), 'openTender');
+  const original = [...ledger(call(open, 'submitPrivateBidConcept').currentContractState.data).bidCommitments][0];
+  const otherAddress = [...ledger(call(open, 'submitPrivateBidConcept', 900n, {}, 0, runtime.decodeContractAddress(stranger)).currentContractState.data).bidCommitments][0];
+  const otherRequirements = [...ledger(call(call(tender(1000n, stranger), 'openTender'), 'submitPrivateBidConcept').currentContractState.data).bidCommitments][0];
+  for (const changed of [otherAddress, otherRequirements]) {
+    assert.notDeepEqual(changed[0], original[0]);
+    assert.notDeepEqual(changed[1], original[1]);
+  }
 });
