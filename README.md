@@ -102,7 +102,7 @@ Use a different browser profile for a second isolated workspace. Clearing the wo
 
 `contracts/private-tender.compact` was compiled with **Compact compiler 0.26.0, language 0.18.0, `--skip-zk`**. It represents creation, status, deadline assertions, eligibility witnesses, and positive private bid input. No amount is written to public ledger state.
 
-**Prototype only:** private-secret owner authorization and deadline guards now have 11 compiled-runtime tests (`pnpm test:contract`), but eligibility remains untrusted self-attestation, bids are not retained, and no winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, owner-secret custody limitations, and the distinction between local query time and network validity.
+**Prototype only:** private-secret owner authorization and deadline guards now have 12 compiled-runtime tests (`pnpm test:contract`), but eligibility remains untrusted self-attestation, bids are not retained, and no winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, owner-secret custody limitations, and the distinction between local query time and network validity.
 
 ## Next milestones
 

@@ -27,7 +27,7 @@ function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0) {
   });
   const currentContractState = new runtime.ContractState();
   currentContractState.data = result.context.transactionContext.state;
-  return { currentContractState, currentPrivateState: result.context.currentPrivateState, currentZswapLocalState: result.context.currentZswapLocalState };
+  return { currentContractState, currentPrivateState: result.context.currentPrivateState, currentZswapLocalState: result.context.currentZswapLocalState, result };
 }
 
 test('compiled lifecycle records participation and closes after deadline', () => {
@@ -103,4 +103,17 @@ test('pinned runtime compares supplied block time despite nonzero uncertainty', 
   assert.throws(() => call(state, 'submitPrivateBidConcept', 1000n, {}, 2), /deadline/i);
   assert.throws(() => call(state, 'closeTender', 1000n, {}, 2), /deadline/i);
   assert.equal(ledger(call(state, 'closeTender', 1001n, {}, 2).currentContractState.data).status, TenderStatus.Closed);
+});
+
+test('opening transcript cannot be replayed against an expired ledger time', () => {
+  const state = tender();
+  const { result } = call(state, 'openTender', 999n);
+  const transcript = { gas: 1000000000n, effects: result.context.transactionContext.effects, program: result.proofData.publicTranscript };
+  for (const time of [999n, 1000n, 1001n]) {
+    const replay = new runtime.QueryContext(state.currentContractState.data, runtime.dummyContractAddress());
+    replay.block = { secondsSinceEpoch: time, secondsSinceEpochErr: 0, blockHash: '00'.repeat(32) };
+    const run = () => replay.runTranscript(transcript, runtime.CostModel.dummyCostModel());
+    if (time === 999n) assert.doesNotThrow(run);
+    else assert.throws(run);
+  }
 });
