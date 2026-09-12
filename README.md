@@ -6,7 +6,7 @@ The website is deployed; Midnight proof generation and contract deployment remai
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
-**Estimated prototype progress: ~30%** (qualitative scope estimate, not a measured completion rate).
+**Estimated prototype progress: ~38%** (qualitative scope estimate, not a measured completion rate or production-readiness claim).
 
 This first development pass is a database-backed prototype, not a deployed auction or a production-private bidding system. Neon PostgreSQL now persists public tender records; eligibility and bids remain local simulations.
 
@@ -18,7 +18,7 @@ This first development pass is a database-backed prototype, not a deployed aucti
 - Draft editing reuses the creation form; publishing opens a draft, and confirmed early closure permanently closes an open tender. Server-side workspace ownership and row locks protect each mutation. Opened contents are immutable and closed tenders cannot reopen.
 - Development eligibility adapter with eligible/ineligible states and tender binding.
 - Bid input simulation that refreshes public tender state, then rechecks eligibility, current deadline, and decimal amount before returning an amount-free local receipt. Amounts are never included in that read request; unavailable/closed tenders fail closed.
-- Domain/client/API-boundary tests, an opt-in real-database API integration check, and a compile-checked Compact foundation.
+- Domain/client/API-boundary tests, an opt-in real-database API integration check, and a compiled-runtime-tested Compact foundation.
 
 ## Privacy model and limitations
 
@@ -102,11 +102,11 @@ Use a different browser profile for a second isolated workspace. Clearing the wo
 
 `contracts/private-tender.compact` was compiled with **Compact compiler 0.26.0, language 0.18.0, `--skip-zk`**. It represents creation, status, deadline assertions, eligibility witnesses, and positive private bid input. No amount is written to public ledger state.
 
-**Prototype only:** untrusted eligibility witnesses, no owner authorization, no retained bid commitments, and no winning-bid algorithm. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for the reproducible compilation command and official references.
+**Prototype only:** private-secret owner authorization and deadline guards now have 11 compiled-runtime tests (`pnpm test:contract`), but eligibility remains untrusted self-attestation, bids are not retained, and no winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, owner-secret custody limitations, and the distinction between local query time and network validity.
 
 ## Next milestones
 
-1. Trusted issuer eligibility predicates and organization authorization; compatible wallet/proof-server integration.
+1. Trusted issuer eligibility predicates and verified organization enrollment beyond secret-possession authorization; compatible wallet/proof-server integration.
 2. Tender-bound salted commitments, private bid state, and duplicate protection with real proof tests.
 3. Confidential winner evaluation after the deadline and public verification of the result.
 
