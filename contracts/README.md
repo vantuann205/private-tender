@@ -22,4 +22,4 @@ Public state contains lifecycle status, deadline, requirements digest, owner com
 
 Enrollment proves only that the tender owner approved a commitment; it does not prove a legal identity or prevent one organization from controlling multiple secrets. Bid reveal, winner selection, settlement, secret recovery/rotation, and escrow are outside this contract. The hosted browser workflow remains database-backed and does not submit Midnight transactions.
 
-Confirmed Preprod addresses and transaction evidence are added only after indexer verification.
+Indexer-verified contract addresses, deployment transactions, smoke calls, public states, and toolchain versions are recorded in [`deployments/preprod.json`](../deployments/preprod.json).

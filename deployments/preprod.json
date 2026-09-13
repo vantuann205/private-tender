@@ -1,0 +1,123 @@
+{
+  "network": "preprod",
+  "compiler": "0.31.1",
+  "language": "0.23.0",
+  "runtime": "0.16.0",
+  "contracts": [
+    {
+      "walletAlias": "02",
+      "walletAddress": "mn_addr_preprod1k2dnvxdrm62lgugue7kh43f0gzuzcgtc4l0vjwckc0f9gu69d0esv3qwhh",
+      "contractAddress": "59f7fd5365f79c901ae145ad60eb06b4539a94807ec200d3c525cb859f75eb68",
+      "deployment": {
+        "txId": "00d62882525cfe7933dfdfd30e8674c5cc5d14b166580025e37edbf92c2d18ce11",
+        "txHash": "fef5010566afd5c64fa9a248c63f71d7778df421b93c7fe37da038574a03a8aa",
+        "blockHash": "9149cc63d381a82a55d455b9a45a55c08ee2518c26709d74fbbbb3d060f6e7e8",
+        "blockHeight": 2532925,
+        "blockTimestamp": 1789310184000,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "0089b4b8c144bdaafda3ad87db5b390504d02f7e4b4ef3c626c009014e8f957980",
+          "txHash": "ed16351e328577db09f6fb8bf7e87899b05c2a289f678903d13020e8d3ed859c",
+          "blockHash": "3f34366b65494cd0f597d5332cc9833c1112fdefd10d7a762ff8876eccc05d08",
+          "blockHeight": 2532932,
+          "blockTimestamp": 1789310226000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "status": "Draft",
+        "submissionCount": 0,
+        "requirementsDigest": "cdbc8996b855e9e982a07acb89d15e48b5aaa5e660031599af403717cb017e59",
+        "enrolledVendorCount": 1,
+        "bidCommitmentCount": 0
+      }
+    },
+    {
+      "walletAlias": "03",
+      "walletAddress": "mn_addr_preprod1h3nry3y7duwtg7atjd7jlkyvlfzckmklaxldp75zwz2ppqgu3e2s9dhunu",
+      "contractAddress": "e836c3acca7b54beaeab1c0df3c8b115fa76c8b4302fc0b0b221f1614fe48ad3",
+      "deployment": {
+        "txId": "00669743ac63c42003b4f8d31c7174c3d9d9348c6b732472e112ee345ecb5bd531",
+        "txHash": "e8c79167be0a28932fd95e39f0721cb265f433450d7b58a6e3292031c448ac20",
+        "blockHash": "c1b1359432f5be406c01d29f6f54d7bc72f919fdb48d0e36a89e2af5199db2bc",
+        "blockHeight": 2533087,
+        "blockTimestamp": 1789311156000,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "009d3f4e974f4526ad5507cba4eb9e9e395fae2f0fb12915f7b510e09c421b2082",
+          "txHash": "8a04385cfa2610ee96d5ea9aa841f43fa0a8eee25a43d7ba96455cb251338c32",
+          "blockHash": "6e01af36f125c194529e7f58a3f44f8aca9619d5fb15bfc9dd3605edf32460e5",
+          "blockHeight": 2533093,
+          "blockTimestamp": 1789311192001,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "status": "Draft",
+        "submissionCount": 0,
+        "requirementsDigest": "b86cfcf87f05f864e8b27a12dc4a47724e5508746f10c48b0f46430cf4332878",
+        "enrolledVendorCount": 1,
+        "bidCommitmentCount": 0
+      }
+    },
+    {
+      "walletAlias": "imported",
+      "walletAddress": "mn_addr_preprod1lmkn8u69cnxhqetxqp25umer5f4slamacakeun9cdm2nxvd30khs9yy2wj",
+      "contractAddress": "8188ed97c3e3ca5c43c7fa71796f1a9cf47affbf84d554d12c0d440076efef9d",
+      "deployment": {
+        "txId": "00358a5f272d11b4f38e8b78b73a177f58cd3d014d48097efd5fb7e869ed764b99",
+        "txHash": "baf3043fe91004ea68bcebef4a891ac1b3eeee85fb2b093522931e9c6827bfa4",
+        "blockHash": "fcdfa16294dda67fe6609d65aa0af4b7ebe3916a35843905a2db022274b9ba1b",
+        "blockHeight": 2531757,
+        "blockTimestamp": 1789303176000,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "003012a9ab9721391b73b280dff136c2230535c8477bbac6d9693e2f96f2f1c028",
+          "txHash": "9f5ea06c969bf65bb37a4c86a2423388c84360ee3e7491467bef476e422d3529",
+          "blockHash": "082ae39a38f51bd196cf06302ee486844f7cb229b871b25b23d7c49366ce5b6c",
+          "blockHeight": 2531762,
+          "blockTimestamp": 1789303206000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        },
+        {
+          "txId": "0093d0a76a6e29dfba28b4f9a2386ca4025449263b59ec5e8e5d90d8fdb479e7b6",
+          "txHash": "bf69b5cc88939d754c76da9db05737c5fd79c337b254859f186cdddee370de00",
+          "blockHash": "87eef86d19a58f89c5e3235860c03fef3ce72ed98cfa8c727d46f9f88c2eb08a",
+          "blockHeight": 2531767,
+          "blockTimestamp": 1789303236000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        },
+        {
+          "txId": "009530c489fd94aaeb213a21a8b9334d018ddcccf10c5e177db822ba31aa65da3a",
+          "txHash": "b48e4d646124b32047ab2629de2f64490e72a653875209b604437c79e628c98e",
+          "blockHash": "961ca0c06cf48e1645a371df2cc86188095e92c8dbafd412dfe45a8973f8dfbe",
+          "blockHeight": 2531772,
+          "blockTimestamp": 1789303266001,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "status": "Open",
+        "submissionCount": 1,
+        "requirementsDigest": "275f70445fe9d76ee287d7b7dea69767c1102640275c47e4dfc62d00344019fe",
+        "enrolledVendorCount": 1,
+        "bidCommitmentCount": 1
+      }
+    }
+  ]
+}
+

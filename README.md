@@ -2,13 +2,11 @@
 
 [Live hosted prototype](https://private-tender-ten.vercel.app) · Vercel production · Neon PostgreSQL (Singapore)
 
-The website is deployed; Midnight proof generation and contract deployment remain prototype work, as described below.
+The hosted workflow and the Midnight contract are deliberately separate: the browser UI remains database-backed, while three independently funded Compact instances are verified on Midnight Preprod.
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
-**Estimated prototype progress: ~48%** (qualitative scope estimate, not a measured completion rate or production-readiness claim).
-
-This first development pass is a database-backed prototype, not a deployed auction or a production-private bidding system. Neon PostgreSQL now persists public tender records; eligibility and bids remain local simulations.
+This is not a production auction or settlement system. Neon PostgreSQL persists the hosted workflow; the separately deployed contract proves enrollment, lifecycle authorization, and private bid commitment rules on Preprod.
 
 ## Implemented
 
@@ -100,13 +98,21 @@ Use a different browser profile for a second isolated workspace. Clearing the wo
 
 ## Midnight / Compact status
 
-`contracts/private-tender.compact` was compiled with **Compact compiler 0.26.0, language 0.18.0, `--skip-zk`**. It represents creation, status, deadline assertions, eligibility witnesses, and positive private bid input. No amount is written to public ledger state.
+`contracts/private-tender.compact` is release-compiled with **Compact compiler 0.31.1, language 0.23.0, and runtime 0.16.0**. The full build generates prover, verifier, and ZKIR assets; 24 contract/runtime tests cover owner authorization, vendor enrollment, deadlines, salted bid commitments, privacy boundaries, and replay rejection.
 
-**Prototype only:** 20 compiled-runtime tests (`pnpm test:contract`) now cover private-secret owner authorization, deadlines, salted bid commitments, and tender-bound vendor nullifiers. Only opaque commitments are retained; duplicate submissions by the same secret are rejected even with a changed amount/salt. This is pseudonymous duplicate resistance, not one-real-vendor enforcement: fresh secrets bypass that identity assumption. Eligibility remains untrusted self-attestation, and no reveal, settlement, or winning-bid algorithm exists. The UI does not call this contract. No proving keys, real ZK proofs, wallet transactions, or deployment have been produced. See [contract notes](contracts/README.md) for reproducible checks, custody limitations, and local-runtime versus network-validation boundaries.
+Three distinct Preprod instances were deployed from three wallet addresses. Every listed transaction was read back from the indexer with status `SucceedEntirely`; the complete machine-readable record is [deployments/preprod.json](deployments/preprod.json).
+
+| Instance | Contract | Deployment | Verified smoke activity |
+|---|---|---|---|
+| 02 | [`59f7fd53…eb68`](https://explorer.preprod.midnight.network/contracts/stream/59f7fd5365f79c901ae145ad60eb06b4539a94807ec200d3c525cb859f75eb68) | [`00d62882…ce11`](https://explorer.preprod.midnight.network/transactions/00d62882525cfe7933dfdfd30e8674c5cc5d14b166580025e37edbf92c2d18ce11) | [`enrollVendor`](https://explorer.preprod.midnight.network/transactions/0089b4b8c144bdaafda3ad87db5b390504d02f7e4b4ef3c626c009014e8f957980) |
+| 03 | [`e836c3ac…8ad3`](https://explorer.preprod.midnight.network/contracts/stream/e836c3acca7b54beaeab1c0df3c8b115fa76c8b4302fc0b0b221f1614fe48ad3) | [`00669743…d531`](https://explorer.preprod.midnight.network/transactions/00669743ac63c42003b4f8d31c7174c3d9d9348c6b732472e112ee345ecb5bd531) | [`enrollVendor`](https://explorer.preprod.midnight.network/transactions/009d3f4e974f4526ad5507cba4eb9e9e395fae2f0fb12915f7b510e09c421b2082) |
+| imported | [`8188ed97…ef9d`](https://explorer.preprod.midnight.network/contracts/stream/8188ed97c3e3ca5c43c7fa71796f1a9cf47affbf84d554d12c0d440076efef9d) | [`00358a5f…b99`](https://explorer.preprod.midnight.network/transactions/00358a5f272d11b4f38e8b78b73a177f58cd3d014d48097efd5fb7e869ed764b99) | [`enroll → open → bid`](https://explorer.preprod.midnight.network/transactions/009530c489fd94aaeb213a21a8b9334d018ddcccf10c5e177db822ba31aa65da3a) |
+
+Only opaque commitments are retained; duplicate bids under the same enrolled secret are rejected even when amount or salt changes. This is pseudonymous duplicate resistance, not one-real-vendor enforcement: a fresh approved secret is a different participant. No reveal, winner selection, escrow, or settlement circuit exists, and the hosted UI does not submit Midnight transactions. See [contract notes](contracts/README.md).
 
 ## Next milestones
 
-1. Trusted issuer eligibility predicates and verified organization enrollment beyond secret-possession authorization; compatible wallet/proof-server integration.
+1. Trusted issuer eligibility predicates and verified organization enrollment beyond secret-possession authorization; browser wallet/proof-server integration.
 2. Durable private bid/secret/salt custody and issuer-bound vendor uniqueness; validate commitments and duplicate rejection with real proof tests.
 3. Confidential winner evaluation after the deadline and public verification of the result.
 
