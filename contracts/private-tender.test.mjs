@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createRequire } from 'node:module';
 import * as runtime from '@midnight-ntwrk/compact-runtime';
+import { Contract, ledger, TenderStatus } from '../.compact-generated/private-tender/contract/index.js';
 
-const { Contract, ledger, TenderStatus } = createRequire(import.meta.url)('../.compact-generated/private-tender/contract/index.cjs');
 const owner = new Uint8Array(32).fill(1);
 const stranger = new Uint8Array(32).fill(2);
 const vendor = new Uint8Array(32).fill(3);
 const salt = new Uint8Array(32).fill(4);
+const replayGas = {
+  readTime: 10n ** 18n,
+  computeTime: 10n ** 18n,
+  bytesWritten: 10n ** 18n,
+  bytesDeleted: 10n ** 18n,
+};
 const contract = new Contract({
   ownerSecret: ({ privateState }) => [privateState, privateState.secret],
   meetsRequirements: ({ privateState }) => [privateState, privateState.eligible],
@@ -17,20 +22,24 @@ const contract = new Contract({
 });
 
 function tender(deadline = 1000n, requirements = new Uint8Array(32)) {
-  return contract.initialState(runtime.constructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '00'.repeat(32)), deadline, requirements);
+  return contract.initialState(runtime.createConstructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '0'.repeat(64)), deadline, requirements);
 }
 
 function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0, address = runtime.dummyContractAddress()) {
-  const transactionContext = new runtime.QueryContext(state.currentContractState.data, address);
-  transactionContext.block = { secondsSinceEpoch: time, secondsSinceEpochErr: uncertainty, blockHash: '00'.repeat(32) };
-  const result = contract.circuits[circuit]({
-    originalState: state.currentContractState,
+  const currentQueryContext = new runtime.QueryContext(state.currentContractState.data, address);
+  currentQueryContext.block = {
+    ...currentQueryContext.block,
+    secondsSinceEpoch: time,
+    secondsSinceEpochErr: uncertainty,
+    blockHash: '0'.repeat(64),
+  };
+  const result = contract.impureCircuits[circuit]({
     currentPrivateState: { ...state.currentPrivateState, ...overrides },
     currentZswapLocalState: state.currentZswapLocalState,
-    transactionContext,
+    costModel: runtime.CostModel.initialCostModel(),
+    currentQueryContext,
   });
-  const currentContractState = new runtime.ContractState();
-  currentContractState.data = result.context.transactionContext.state;
+  const currentContractState = { data: result.context.currentQueryContext.state };
   return { currentContractState, currentPrivateState: result.context.currentPrivateState, currentZswapLocalState: result.context.currentZswapLocalState, result };
 }
 
@@ -112,11 +121,16 @@ test('pinned runtime compares supplied block time despite nonzero uncertainty', 
 test('opening transcript cannot be replayed against an expired ledger time', () => {
   const state = tender();
   const { result } = call(state, 'openTender', 999n);
-  const transcript = { gas: 1000000000n, effects: result.context.transactionContext.effects, program: result.proofData.publicTranscript };
+  const transcript = { gas: replayGas, effects: result.context.currentQueryContext.effects, program: result.proofData.publicTranscript };
   for (const time of [999n, 1000n, 1001n]) {
     const replay = new runtime.QueryContext(state.currentContractState.data, runtime.dummyContractAddress());
-    replay.block = { secondsSinceEpoch: time, secondsSinceEpochErr: 0, blockHash: '00'.repeat(32) };
-    const run = () => replay.runTranscript(transcript, runtime.CostModel.dummyCostModel());
+    replay.block = {
+      ...replay.block,
+      secondsSinceEpoch: time,
+      secondsSinceEpochErr: 0,
+      blockHash: '00'.repeat(32),
+    };
+    const run = () => replay.runTranscript(transcript, runtime.CostModel.initialCostModel());
     if (time === 999n) assert.doesNotThrow(run);
     else assert.throws(run);
   }
@@ -178,7 +192,7 @@ test('public ledger and transcript omit raw bid amount, vendor secret, and salt'
   const amount = 0x123456789abcdef0n;
   const { currentContractState, result } = call(call(tender(), 'openTender'), 'submitPrivateBidConcept', 900n, { amount });
   const publicData = JSON.stringify({
-    ledger: currentContractState.data.encode(),
+    ledger: currentContractState.data.state.encode(),
     transcript: result.proofData.publicTranscript,
     input: result.proofData.input,
     output: result.proofData.output,
@@ -193,13 +207,18 @@ test('public ledger and transcript omit raw bid amount, vendor secret, and salt'
 test('submission transcript inserts its commitment but cannot replay after it is spent', () => {
   const open = call(tender(), 'openTender');
   const submitted = call(open, 'submitPrivateBidConcept');
-  const transcript = { gas: 1000000000n, effects: submitted.result.context.transactionContext.effects, program: submitted.result.proofData.publicTranscript };
+  const transcript = { gas: replayGas, effects: submitted.result.context.currentQueryContext.effects, program: submitted.result.proofData.publicTranscript };
   const replay = new runtime.QueryContext(open.currentContractState.data, runtime.dummyContractAddress());
-  replay.block = { secondsSinceEpoch: 900n, secondsSinceEpochErr: 0, blockHash: '00'.repeat(32) };
-  const applied = replay.runTranscript(transcript, runtime.CostModel.dummyCostModel());
+  replay.block = {
+    ...replay.block,
+    secondsSinceEpoch: 900n,
+    secondsSinceEpochErr: 0,
+    blockHash: '00'.repeat(32),
+  };
+  const applied = replay.runTranscript(transcript, runtime.CostModel.initialCostModel());
   assert.equal(ledger(applied.state).submissionCount, 1n);
   assert.deepEqual([...ledger(applied.state).bidCommitments], [...ledger(submitted.currentContractState.data).bidCommitments]);
-  assert.throws(() => applied.runTranscript(transcript, runtime.CostModel.dummyCostModel()));
+  assert.throws(() => applied.runTranscript(transcript, runtime.CostModel.initialCostModel()));
 });
 
 test('rejected bids leave both nullifier map and participation count unchanged', () => {

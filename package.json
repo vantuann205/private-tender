@@ -2,6 +2,7 @@
   "name": "private-tender",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.18.3",
   "scripts": {
     "dev": "next dev",
@@ -10,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "test:contract": "node scripts/test-contract.mjs",
+    "contract:compile": "node scripts/test-contract.mjs --compile-only",
+    "test:contract": "node scripts/test-contract.mjs --fast",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/migrate.ts",
     "test:api": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/test-api.ts"
@@ -25,7 +27,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@midnight-ntwrk/compact-runtime": "0.9.0",
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.23.1",
