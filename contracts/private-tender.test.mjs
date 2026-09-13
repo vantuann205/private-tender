@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as runtime from '@midnight-ntwrk/compact-runtime';
-import { Contract, ledger, TenderStatus } from '../.compact-generated/private-tender/contract/index.js';
+import { Contract, ledger, pureCircuits, TenderStatus } from '../.compact-generated/private-tender/contract/index.js';
 
 const owner = new Uint8Array(32).fill(1);
 const stranger = new Uint8Array(32).fill(2);
 const vendor = new Uint8Array(32).fill(3);
 const salt = new Uint8Array(32).fill(4);
+const requirements = new Uint8Array(32);
+const deploymentAddress = runtime.dummyContractAddress();
 const replayGas = {
   readTime: 10n ** 18n,
   computeTime: 10n ** 18n,
@@ -15,17 +17,16 @@ const replayGas = {
 };
 const contract = new Contract({
   ownerSecret: ({ privateState }) => [privateState, privateState.secret],
-  meetsRequirements: ({ privateState }) => [privateState, privateState.eligible],
   privateBidAmount: ({ privateState }) => [privateState, privateState.amount],
   vendorSecret: ({ privateState }) => [privateState, privateState.vendor],
   privateBidSalt: ({ privateState }) => [privateState, privateState.salt],
 });
 
-function tender(deadline = 1000n, requirements = new Uint8Array(32)) {
-  return contract.initialState(runtime.createConstructorContext({ secret: owner, eligible: true, amount: 50n, vendor, salt }, '0'.repeat(64)), deadline, requirements);
+function tender(deadline = 1000n, requirementsHash = requirements) {
+  return contract.initialState(runtime.createConstructorContext({ secret: owner, amount: 50n, vendor, salt }, '0'.repeat(64)), deadline, requirementsHash);
 }
 
-function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0, address = runtime.dummyContractAddress()) {
+function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0, address = deploymentAddress, args = []) {
   const currentQueryContext = new runtime.QueryContext(state.currentContractState.data, address);
   currentQueryContext.block = {
     ...currentQueryContext.block,
@@ -38,16 +39,54 @@ function call(state, circuit, time = 900n, overrides = {}, uncertainty = 0, addr
     currentZswapLocalState: state.currentZswapLocalState,
     costModel: runtime.CostModel.initialCostModel(),
     currentQueryContext,
-  });
+  }, ...args);
   const currentContractState = { data: result.context.currentQueryContext.state };
   return { currentContractState, currentPrivateState: result.context.currentPrivateState, currentZswapLocalState: result.context.currentZswapLocalState, result };
 }
 
+function vendorCommitment(secret = vendor, requirementsHash = requirements, address = deploymentAddress) {
+  return pureCircuits.vendorIdentity(runtime.encodeContractAddress(address), requirementsHash, secret);
+}
+
+function openForBids({
+  deadline = 1000n,
+  requirementsHash = requirements,
+  address = deploymentAddress,
+  vendors = [vendor],
+  time = 900n,
+  uncertainty = 0,
+} = {}) {
+  let state = tender(deadline, requirementsHash);
+  for (const secret of vendors) {
+    state = call(state, 'enrollVendor', time, {}, uncertainty, address, [vendorCommitment(secret, requirementsHash, address)]);
+  }
+  return call(state, 'openTender', time, {}, uncertainty, address);
+}
+
+test('only the owner can enroll one nonzero vendor commitment in Draft', () => {
+  let state = tender();
+  const commitment = vendorCommitment();
+  assert.throws(() => call(state, 'enrollVendor', 900n, { secret: stranger }, 0, deploymentAddress, [commitment]), /owner/i);
+  state = call(state, 'enrollVendor', 900n, {}, 0, deploymentAddress, [commitment]);
+  assert.equal(ledger(state.currentContractState.data).enrolledVendors.member(commitment), true);
+  assert.throws(() => call(state, 'enrollVendor', 900n, {}, 0, deploymentAddress, [commitment]), /already enrolled/i);
+  assert.throws(() => call(state, 'enrollVendor', 900n, {}, 0, deploymentAddress, [new Uint8Array(32)]), /missing/i);
+});
+
+test('only an enrolled secret can submit and enrollment closes with Draft', () => {
+  let state = tender();
+  assert.throws(() => call(state, 'submitPrivateBid'), /not open/i);
+  state = call(state, 'openTender');
+  assert.throws(() => call(state, 'submitPrivateBid'), /not enrolled/i);
+  assert.throws(() => call(state, 'enrollVendor', 900n, {}, 0, deploymentAddress, [vendorCommitment()]), /draft/i);
+});
+
 test('compiled lifecycle records participation and closes after deadline', () => {
   let state = tender();
   assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Draft);
+  state = call(state, 'enrollVendor', 900n, {}, 0, deploymentAddress, [vendorCommitment()]);
   state = call(state, 'openTender');
-  state = call(state, 'submitPrivateBidConcept');
+  state = call(state, 'submitPrivateBid');
   assert.equal(ledger(state.currentContractState.data).submissionCount, 1n);
   state = call(state, 'closeTender', 1001n);
   assert.equal(ledger(state.currentContractState.data).status, TenderStatus.Closed);
@@ -83,18 +122,18 @@ test('the public owner commitment does not grant owner authority', () => {
 });
 
 test('bids require an open tender and cannot land at or after its deadline', () => {
-  assert.throws(() => call(tender(), 'submitPrivateBidConcept'), /not open/i);
-  const state = call(tender(), 'openTender');
+  assert.throws(() => call(tender(), 'submitPrivateBid'), /not open/i);
+  const state = openForBids();
   for (const time of [1000n, 1001n]) {
-    assert.throws(() => call(state, 'submitPrivateBidConcept', time), /deadline/i);
+    assert.throws(() => call(state, 'submitPrivateBid', time), /deadline/i);
   }
-  assert.equal(ledger(call(state, 'submitPrivateBidConcept', 999n).currentContractState.data).submissionCount, 1n);
+  assert.equal(ledger(call(state, 'submitPrivateBid', 999n).currentContractState.data).submissionCount, 1n);
 });
 
-test('ineligible or zero bids leave participation unchanged', () => {
-  const state = call(tender(), 'openTender');
-  assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, { eligible: false }), /eligibility/i);
-  assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, { amount: 0n }), /positive/i);
+test('unenrolled or zero bids leave participation unchanged', () => {
+  const state = openForBids();
+  assert.throws(() => call(state, 'submitPrivateBid', 900n, { vendor: stranger }), /not enrolled/i);
+  assert.throws(() => call(state, 'submitPrivateBid', 900n, { amount: 0n }), /positive/i);
   assert.equal(ledger(state.currentContractState.data).submissionCount, 0n);
 });
 
@@ -106,14 +145,14 @@ test('closing requires strictly past deadline and lifecycle cannot replay', () =
   const closed = call(state, 'closeTender', 1001n);
   assert.throws(() => call(closed, 'closeTender', 1002n), /not open/i);
   assert.throws(() => call(closed, 'openTender', 1002n), /draft/i);
-  assert.throws(() => call(closed, 'submitPrivateBidConcept', 1002n), /not open/i);
+  assert.throws(() => call(closed, 'submitPrivateBid', 1002n), /not open/i);
 });
 
 test('pinned runtime compares supplied block time despite nonzero uncertainty', () => {
   // Characterizes the real 0.3.0 query runtime, not network validity-window enforcement.
-  const state = call(tender(), 'openTender', 999n, {}, 2);
-  assert.equal(ledger(call(state, 'submitPrivateBidConcept', 999n, {}, 2).currentContractState.data).submissionCount, 1n);
-  assert.throws(() => call(state, 'submitPrivateBidConcept', 1000n, {}, 2), /deadline/i);
+  const state = openForBids({ time: 999n, uncertainty: 2 });
+  assert.equal(ledger(call(state, 'submitPrivateBid', 999n, {}, 2).currentContractState.data).submissionCount, 1n);
+  assert.throws(() => call(state, 'submitPrivateBid', 1000n, {}, 2), /deadline/i);
   assert.throws(() => call(state, 'closeTender', 1000n, {}, 2), /deadline/i);
   assert.equal(ledger(call(state, 'closeTender', 1001n, {}, 2).currentContractState.data).status, TenderStatus.Closed);
 });
@@ -137,15 +176,15 @@ test('opening transcript cannot be replayed against an expired ledger time', () 
 });
 
 test('same vendor cannot submit again even after changing private amount and salt', () => {
-  const state = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const state = call(openForBids(), 'submitPrivateBid');
   for (const overrides of [{}, { amount: 70n }, { salt: stranger }, { amount: 70n, salt: stranger }]) {
-    assert.throws(() => call(state, 'submitPrivateBidConcept', 900n, overrides), /already submitted/i);
+    assert.throws(() => call(state, 'submitPrivateBid', 900n, overrides), /already submitted/i);
   }
   assert.equal(ledger(state.currentContractState.data).submissionCount, 1n);
 });
 
 test('submission retains one opaque commitment keyed by its vendor nullifier', () => {
-  const state = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const state = call(openForBids(), 'submitPrivateBid');
   const bids = ledger(state.currentContractState.data).bidCommitments;
   assert.ok(bids, 'bid commitment ledger must exist');
   const entries = [...bids];
@@ -157,9 +196,9 @@ test('submission retains one opaque commitment keyed by its vendor nullifier', (
 });
 
 test('a distinct vendor secret adds an entry without overwriting the first bid', () => {
-  const first = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const first = call(openForBids({ vendors: [vendor, stranger] }), 'submitPrivateBid');
   const [key, commitment] = [...ledger(first.currentContractState.data).bidCommitments][0];
-  const second = call(first, 'submitPrivateBidConcept', 900n, { vendor: stranger });
+  const second = call(first, 'submitPrivateBid', 900n, { vendor: stranger });
   const state = ledger(second.currentContractState.data);
   assert.equal(state.submissionCount, 2n);
   assert.equal(state.bidCommitments.size(), 2n);
@@ -167,8 +206,8 @@ test('a distinct vendor secret adds an entry without overwriting the first bid',
 });
 
 test('bid commitment binds amount and salt while nullifier is stable', () => {
-  const open = call(tender(), 'openTender');
-  const entry = (overrides) => [...ledger(call(open, 'submitPrivateBidConcept', 900n, overrides).currentContractState.data).bidCommitments][0];
+  const open = openForBids();
+  const entry = (overrides) => [...ledger(call(open, 'submitPrivateBid', 900n, overrides).currentContractState.data).bidCommitments][0];
   const [nullifier, commitment] = entry({});
   for (const overrides of [{ amount: 51n }, { salt: stranger }]) {
     const changed = entry(overrides);
@@ -178,11 +217,14 @@ test('bid commitment binds amount and salt while nullifier is stable', () => {
 });
 
 test('nullifier and commitment bind contract address and tender requirements', () => {
-  const open = call(tender(), 'openTender');
-  const original = [...ledger(call(open, 'submitPrivateBidConcept').currentContractState.data).bidCommitments][0];
-  const otherAddress = [...ledger(call(open, 'submitPrivateBidConcept', 900n, {}, 0, runtime.decodeContractAddress(stranger)).currentContractState.data).bidCommitments][0];
-  const otherRequirements = [...ledger(call(call(tender(1000n, stranger), 'openTender'), 'submitPrivateBidConcept').currentContractState.data).bidCommitments][0];
-  for (const changed of [otherAddress, otherRequirements]) {
+  const originalOpen = openForBids();
+  const original = [...ledger(call(originalOpen, 'submitPrivateBid').currentContractState.data).bidCommitments][0];
+  const secondAddress = runtime.decodeContractAddress(stranger);
+  const addressOpen = openForBids({ address: secondAddress });
+  const addressBound = [...ledger(call(addressOpen, 'submitPrivateBid', 900n, {}, 0, secondAddress).currentContractState.data).bidCommitments][0];
+  const requirementsOpen = openForBids({ requirementsHash: stranger });
+  const requirementsBound = [...ledger(call(requirementsOpen, 'submitPrivateBid').currentContractState.data).bidCommitments][0];
+  for (const changed of [addressBound, requirementsBound]) {
     assert.notDeepEqual(changed[0], original[0]);
     assert.notDeepEqual(changed[1], original[1]);
   }
@@ -190,7 +232,7 @@ test('nullifier and commitment bind contract address and tender requirements', (
 
 test('public ledger and transcript omit raw bid amount, vendor secret, and salt', () => {
   const amount = 0x123456789abcdef0n;
-  const { currentContractState, result } = call(call(tender(), 'openTender'), 'submitPrivateBidConcept', 900n, { amount });
+  const { currentContractState, result } = call(openForBids(), 'submitPrivateBid', 900n, { amount });
   const publicData = JSON.stringify({
     ledger: currentContractState.data.state.encode(),
     transcript: result.proofData.publicTranscript,
@@ -205,8 +247,8 @@ test('public ledger and transcript omit raw bid amount, vendor secret, and salt'
 });
 
 test('submission transcript inserts its commitment but cannot replay after it is spent', () => {
-  const open = call(tender(), 'openTender');
-  const submitted = call(open, 'submitPrivateBidConcept');
+  const open = openForBids();
+  const submitted = call(open, 'submitPrivateBid');
   const transcript = { gas: replayGas, effects: submitted.result.context.currentQueryContext.effects, program: submitted.result.proofData.publicTranscript };
   const replay = new runtime.QueryContext(open.currentContractState.data, runtime.dummyContractAddress());
   replay.block = {
@@ -222,10 +264,10 @@ test('submission transcript inserts its commitment but cannot replay after it is
 });
 
 test('rejected bids leave both nullifier map and participation count unchanged', () => {
-  const submitted = call(call(tender(), 'openTender'), 'submitPrivateBidConcept');
+  const submitted = call(openForBids(), 'submitPrivateBid');
   const original = [...ledger(submitted.currentContractState.data).bidCommitments];
-  for (const overrides of [{ vendor: stranger, amount: 0n }, { vendor: stranger, eligible: false }, { amount: 99n }]) {
-    assert.throws(() => call(submitted, 'submitPrivateBidConcept', 900n, overrides));
+  for (const overrides of [{ vendor: stranger, amount: 0n }, { vendor: stranger }, { amount: 99n }]) {
+    assert.throws(() => call(submitted, 'submitPrivateBid', 900n, overrides));
     assert.equal(ledger(submitted.currentContractState.data).submissionCount, 1n);
     assert.deepEqual([...ledger(submitted.currentContractState.data).bidCommitments], original);
   }

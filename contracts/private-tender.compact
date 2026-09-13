@@ -2,8 +2,6 @@ pragma language_version >= 0.23;
 
 import CompactStandardLibrary;
 
-// FIRST-PASS CONCEPT ONLY. No credential authority,
-// verified vendor uniqueness, escrow, or winner algorithm. Do not deploy.
 // One contract instance represents one tender; metadata stays off-chain.
 export enum TenderStatus { Draft, Open, Closed }
 export ledger status: TenderStatus;
@@ -11,6 +9,7 @@ export ledger deadline: Uint<64>;
 export ledger requirementsDigest: Bytes<32>;
 export ledger submissionCount: Counter;
 export ledger ownerCommitment: Bytes<32>;
+export ledger enrolledVendors: Set<Bytes<32>>;
 export ledger bidCommitments: Map<Bytes<32>, Bytes<32>>;
 
 witness ownerSecret(): Bytes<32>;
@@ -23,11 +22,19 @@ circuit assertOwner(): [] {
   assert(ownerIdentity(ownerSecret()) == ownerCommitment, "Only the tender owner is authorized");
 }
 
-// These witnesses are untrusted self-attestation placeholders, not credentials.
-witness meetsRequirements(): Boolean;
 witness privateBidAmount(): Uint<64>;
 witness vendorSecret(): Bytes<32>;
 witness privateBidSalt(): Bytes<32>;
+
+export pure circuit vendorIdentity(
+  deployment: Bytes<32>,
+  requirements: Bytes<32>,
+  secret: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "private-tender:vendor:v2"), deployment, requirements, secret
+  ]);
+}
 
 struct Bid {
   domain: Bytes<32>;
@@ -50,14 +57,23 @@ export circuit openTender(): [] {
   status = TenderStatus.Open;
 }
 
-export circuit submitPrivateBidConcept(): [] {
+export circuit enrollVendor(commitment: Bytes<32>): [] {
+  assertOwner();
+  assert(status == TenderStatus.Draft, "Tender must be a draft");
+  assert(disclose(commitment) != default<Bytes<32>>, "Missing vendor commitment");
+  assert(!enrolledVendors.member(disclose(commitment)), "Vendor already enrolled");
+  enrolledVendors.insert(disclose(commitment));
+}
+
+export circuit submitPrivateBid(): [] {
   assert(status == TenderStatus.Open, "Tender is not open");
   assert(kernel.blockTimeLessThan(deadline), "Bidding deadline passed");
-  assert(meetsRequirements(), "Eligibility requirement not met");
+  const vendor = vendorIdentity(kernel.self().bytes, requirementsDigest, vendorSecret());
+  assert(enrolledVendors.member(disclose(vendor)), "Vendor is not enrolled");
   const amount = privateBidAmount();
   assert(amount > 0, "Bid must be positive");
   const nullifier = disclose(persistentHash<Vector<4, Bytes<32>>>([
-    pad(32, "private-tender:vendor:v1"), kernel.self().bytes, requirementsDigest, vendorSecret()
+    pad(32, "private-tender:bidder:v2"), kernel.self().bytes, requirementsDigest, vendor
   ]));
   assert(!bidCommitments.member(nullifier), "Vendor already submitted");
   const commitment = persistentCommit<Bid>(Bid {
