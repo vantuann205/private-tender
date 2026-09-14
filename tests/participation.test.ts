@@ -4,21 +4,39 @@ import {
   submitCurrentDemoBid,
 } from "../src/features/bidding/submit-bid";
 import assert from "node:assert/strict";
-test("bid simulation rechecks persisted state without transmitting its amount", async () => {
+test("bid submission rechecks public state and transmits only its opaque commitment", async () => {
   const originalFetch = globalThis.fetch;
   let status = "Closed";
-  const tender = { id: "stale-tender", title: "Tender", description: "Scope", requirements: ["Registered"], deadline: new Date(Date.now() + 86400000).toISOString(), winnerRule: "Lowest eligible bid", status: "Open" as const, organization: "Demo", category: "General", createdAt: new Date().toISOString() };
+  let submittedJson = "";
+  const tender = { id: "stale-tender", title: "Tender", description: "Scope", requirements: ["Registered"], deadline: new Date(Date.now() + 86400000).toISOString(), winnerRule: "Lowest eligible bid", status: "Open" as const, organization: "Demo", category: "General", createdAt: new Date().toISOString(), bidCount: 0 };
   globalThis.fetch = async (url, options) => {
-    assert.equal(url, "/api/tenders");
-    assert.equal(options?.body, undefined);
-    return status === "unavailable" ? Response.json({}, { status: 503 }) : Response.json({ tenders: [{ ...tender, status }] });
+    if (url === "/api/tenders") {
+      assert.equal(options?.body, undefined);
+      return status === "unavailable" ? Response.json({}, { status: 503 }) : Response.json({ tenders: [{ ...tender, status, bidCount: 0 }] });
+    }
+    assert.equal(url, "/api/tenders/stale-tender/bids");
+    submittedJson = String(options?.body);
+    const submittedBody = JSON.parse(submittedJson) as Record<string, unknown>;
+    assert.deepEqual(Object.keys(submittedBody), ["commitment"]);
+    return Response.json({
+      receipt: {
+        id: "server-receipt",
+        tenderId: tender.id,
+        commitment: submittedBody.commitment,
+        submittedAt: new Date().toISOString(),
+      },
+    }, { status: 201 });
   };
   try {
     const proof = proveEligibility(tender, true);
     await assert.rejects(submitCurrentDemoBid(tender.id, proof, "123.45"));
+    assert.equal(submittedJson, "");
     status = "Open";
-    const receipt = await submitCurrentDemoBid(tender.id, proof, "123.45");
-    assert.equal("amount" in receipt, false);
+    const prepared = await submitCurrentDemoBid(tender.id, proof, "123.45");
+    assert.equal(prepared.publicReceipt.id, "server-receipt");
+    assert.equal(JSON.parse(submittedJson).commitment, prepared.commitment);
+    assert.equal(submittedJson.includes("123.45"), false);
+    assert.equal(submittedJson.includes(prepared.privateSalt), false);
     status = "unavailable";
     await assert.rejects(submitCurrentDemoBid(tender.id, proof, "123.45"));
   } finally { globalThis.fetch = originalFetch; }

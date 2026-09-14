@@ -127,6 +127,8 @@ export function TenderDetail({ id }: { id: string }) {
                     ? "Not yet open"
                     : "Bidding closed"}
               </dd>
+              <dt>Committed bids</dt>
+              <dd>{tender.bidCount}</dd>
             </dl>
             {status === "Open" ? (
               <Link className="button" href={`/tenders/${id}/participate`}>
@@ -146,8 +148,8 @@ export function TenderDetail({ id }: { id: string }) {
             <div>
               <strong>No public bid amounts</strong>
               <p>
-                The board contains only public tender details. Bid entry is a
-                local simulation.
+                The board exposes only a commitment count. Amounts and private
+                salts never enter public tender data.
               </p>
             </div>
           </div>

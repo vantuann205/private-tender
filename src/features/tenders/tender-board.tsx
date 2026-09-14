@@ -124,7 +124,9 @@ export function TenderBoard({ vendor = false }: { vendor?: boolean }) {
             <p className="card-description">{tender.description}</p>
             <div className="card-requirements">
               <Icon name="shield" size={16} />
-              <span>{tender.requirements.length} eligibility requirements</span>
+              <span>
+                {tender.requirements.length} requirements · {tender.bidCount} commitments
+              </span>
             </div>
             <div className="card-deadline">
               <Icon name="clock" size={16} />
@@ -177,8 +179,8 @@ export function TenderBoard({ vendor = false }: { vendor?: boolean }) {
         <div>
           <strong>Confidential by design. Honest about the prototype.</strong>
           <p>
-            Eligibility is simulated. Bid inputs are held in memory only, never
-            added to public tender data.{" "}
+            Eligibility is simulated. Bid amounts and salts stay in the browser;
+            only opaque commitments are persisted.{" "}
             <Link href="/privacy" className="inline-link">
               Understand the privacy model
             </Link>

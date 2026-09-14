@@ -1,13 +1,48 @@
 import { tenderStatus, type Tender } from "../tenders/domain";
 import type { EligibilityResult } from "../vendors/eligibility";
 import { refreshTenders, getTenders, getStorageError } from "../tenders/storage";
-export async function submitCurrentDemoBid(id: string, proof: EligibilityResult | null, amount: string): Promise<BidReceipt> {
+export async function submitCurrentDemoBid(id: string, proof: EligibilityResult | null, amount: string): Promise<PreparedBid> {
   // Refresh only public records. The fictional amount never leaves this browser.
   await refreshTenders();
   if (getStorageError()) throw new Error("Cannot verify current tender state. Reload and try again.");
   const tender = getTenders()?.find((item) => item.id === id);
   if (!tender) throw new Error("Tender is no longer available in this workspace.");
-  return submitDemoBid(tender, proof, amount);
+  const prepared = await createBidCommitment(tender, proof, amount);
+  const response = await fetch(`/api/tenders/${encodeURIComponent(id)}/bids`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commitment: prepared.commitment }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data: unknown = await response.json();
+  if (!response.ok)
+    throw new Error(
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : "Bid commitment could not be recorded.",
+    );
+  if (!data || typeof data !== "object" || !("receipt" in data))
+    throw new Error("Bid server returned an invalid receipt.");
+  const receipt = data.receipt as Record<string, unknown>;
+  if (
+    typeof receipt.id !== "string" ||
+    receipt.tenderId !== id ||
+    receipt.commitment !== prepared.commitment ||
+    typeof receipt.submittedAt !== "string" ||
+    !Number.isFinite(Date.parse(receipt.submittedAt))
+  )
+    throw new Error("Bid server returned an invalid receipt.");
+  return {
+    ...prepared,
+    publicReceipt: {
+      id: receipt.id,
+      tenderId: id,
+      commitment: prepared.commitment,
+      submittedAt: receipt.submittedAt,
+      mode: "development",
+    },
+  };
 }
 export type BidReceipt = {
   id: string;

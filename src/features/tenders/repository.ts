@@ -6,7 +6,7 @@ import { RequestError } from "../../lib/api-security";
 import { seedTenders } from "./seed";
 import { type Tender, type TenderInput, type TenderMutation, validateTender } from "./domain";
 
-function publicTender(row: typeof tenders.$inferSelect): Tender {
+function publicTender(row: typeof tenders.$inferSelect, bidCount = 0): Tender {
   return {
     id: row.id,
     title: row.title,
@@ -18,6 +18,7 @@ function publicTender(row: typeof tenders.$inferSelect): Tender {
     organization: row.organization,
     category: row.category,
     createdAt: new Date(row.createdAt).toISOString(),
+    bidCount,
   };
 }
 export async function listWorkspaceTenders(hash: string) {
@@ -40,7 +41,13 @@ export async function listWorkspaceTenders(hash: string) {
       .where(eq(tenders.workspaceHash, hash))
       .orderBy(desc(tenders.createdAt), tenders.id)
       .limit(500);
-    return rows.map(publicTender);
+    const totals = await tx
+      .select({ tenderId: bidCommitments.tenderId, value: count() })
+      .from(bidCommitments)
+      .where(eq(bidCommitments.workspaceHash, hash))
+      .groupBy(bidCommitments.tenderId);
+    const counts = new Map(totals.map((item) => [item.tenderId, item.value]));
+    return rows.map((row) => publicTender(row, counts.get(row.id) ?? 0));
   });
 }
 export async function insertWorkspaceTender(hash: string, input: TenderInput) {
@@ -116,7 +123,16 @@ export async function mutateWorkspaceTender(hash: string, mutation: TenderMutati
       changes = { status: mutation.action === "publish" ? "Open" : "Closed" };
     }
     const [updated] = await tx.update(tenders).set(changes).where(owned).returning();
-    return publicTender(updated);
+    const [total] = await tx
+      .select({ value: count() })
+      .from(bidCommitments)
+      .where(
+        and(
+          eq(bidCommitments.workspaceHash, hash),
+          eq(bidCommitments.tenderId, mutation.id),
+        ),
+      );
+    return publicTender(updated, total.value);
   });
 }
 

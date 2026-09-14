@@ -4,6 +4,7 @@ export function seedTenders(now = Date.now()): Tender[] {
     organization: "Northstar Collective",
     createdAt: new Date(now).toISOString(),
     winnerRule: "Lowest eligible bid",
+    bidCount: 0,
   };
   const deadline = (days: number) =>
     new Date(now + days * 86400000).toISOString();

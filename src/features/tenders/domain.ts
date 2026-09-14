@@ -17,6 +17,7 @@ export type Tender = Omit<TenderInput, "requirements"> & {
   organization: string;
   category: string;
   createdAt: string;
+  bidCount: number;
 };
 export type TenderMutation =
   | { id: string; action: "edit"; input: TenderInput }

@@ -5,14 +5,15 @@ import { Icon } from "@/components/icon";
 import { tenderStatus } from "@/features/tenders/domain";
 import { useTenders } from "@/features/tenders/use-tenders";
 import { StatusBadge } from "@/features/tenders/tender-meta";
-import { submitCurrentDemoBid, type BidReceipt } from "@/features/bidding/submit-bid";
+import { submitCurrentDemoBid, type PreparedBid } from "@/features/bidding/submit-bid";
+import { refreshTenders } from "@/features/tenders/storage";
 import { proveEligibility, type EligibilityResult } from "./eligibility";
 export function ParticipationScreen({ id }: { id: string }) {
   const { tenders, error: databaseError } = useTenders();
   const [meets, setMeets] = useState(false);
   const [proof, setProof] = useState<EligibilityResult | null>(null);
   const [amount, setAmount] = useState("");
-  const [receipt, setReceipt] = useState<BidReceipt | null>(null);
+  const [receipt, setReceipt] = useState<PreparedBid | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   if (!tenders) return <p role="status">Loading vendor participation…</p>;
@@ -46,6 +47,7 @@ export function ParticipationScreen({ id }: { id: string }) {
     try {
       setReceipt(await submitCurrentDemoBid(id, proof, amount));
       setAmount("");
+      void refreshTenders();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bid simulation failed.");
     } finally {
@@ -67,11 +69,11 @@ export function ParticipationScreen({ id }: { id: string }) {
       <div className="notice participation-notice">
         <Icon name="shield" />
         <div>
-          <strong>Development simulation — not a real proof or bid</strong>
+          <strong>Development flow — not a Midnight proof or bid</strong>
           <p>
             Do not enter sensitive information. Eligibility uses
-            self-attestation. Your amount is checked locally, then discarded;
-            nothing is sent to an organization or blockchain.
+            self-attestation. Your amount and salt stay local; only their opaque
+            commitment reaches this workspace database, not a blockchain.
           </p>
         </div>
       </div>
@@ -146,18 +148,21 @@ export function ParticipationScreen({ id }: { id: string }) {
           {receipt ? (
             <div className="receipt" role="status">
               <Icon name="shield" size={35} />
-              <h3>Bid simulation complete</h3>
+              <h3>Bid commitment recorded</h3>
               <p>
-                Your amount was validated and discarded. No actual bid was
-                stored or transmitted.
+                The server received an opaque SHA-256 commitment, never your
+                amount or private salt. This is not yet a Midnight transaction.
               </p>
               <small>
-                Local receipt
+                Server receipt
                 <br />
-                {receipt.id}
+                {receipt.publicReceipt.id}
+                <br />
+                Commitment: {receipt.commitment}
               </small>
               <p className="small-copy">
-                This receipt disappears when you leave or reload the page.
+                Save this private salt with your fictional bid amount for a
+                future reveal flow: <code>{receipt.privateSalt}</code>
               </p>
               <Link className="button secondary" href={`/tenders/${id}`}>
                 Return to tender
@@ -166,7 +171,7 @@ export function ParticipationScreen({ id }: { id: string }) {
           ) : (
             <form onSubmit={submit}>
               <p className="small-copy">
-                The tender board never receives this input.
+                The tender board receives only an opaque commitment.
               </p>
               <div className="field">
                 <label htmlFor="amount">Bid amount (USD)</label>
@@ -184,7 +189,7 @@ export function ParticipationScreen({ id }: { id: string }) {
                   aria-describedby="amount-help"
                 />
                 <small id="amount-help">
-                  In-memory only. Use a fictional amount.
+                  Hashed in this browser. Use a fictional amount.
                 </small>
               </div>
               <div className="bid-privacy">
@@ -199,7 +204,7 @@ export function ParticipationScreen({ id }: { id: string }) {
                 className="button"
                 disabled={submitting || !proof?.eligible || !open || !amount}
               >
-                {submitting ? "Checking tender…" : "Submit demo bid"}
+                {submitting ? "Committing bid…" : "Submit private commitment"}
               </button>
             </form>
           )}

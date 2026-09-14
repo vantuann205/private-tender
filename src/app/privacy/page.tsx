@@ -12,10 +12,10 @@ export default function PrivacyPage() {
       <div className="notice">
         <Icon name="shield" />
         <div>
-          <strong>Current progress: ~25%</strong>
+          <strong>Current progress: ~60%</strong>
           <p>
-            A database-backed product prototype. No live Midnight connection,
-            wallet, or production privacy guarantees.
+            A database-backed workflow plus verified Midnight Preprod contract
+            deployments. The browser is not yet connected to a Midnight wallet.
           </p>
         </div>
       </div>
@@ -41,11 +41,11 @@ export default function PrivacyPage() {
         </p>
         <h2>Private bid input</h2>
         <p>
-          The bid amount stays in the participation screen’s memory. On
-          submission, the development adapter validates it and discards it. No
-          amount is added to the tender model, stored in PostgreSQL, logged, or
-          sent over the network. The local receipt contains no amount and
-          disappears on navigation or reload.
+          The browser hashes the tender ID, normalized amount, and a fresh
+          private salt. Only the resulting 32-byte commitment is sent to and
+          stored by the server. The amount and salt are never added to public
+          tender data or request bodies. The receipt exposes the commitment and
+          private salt locally so the vendor can retain its opening material.
         </p>
         <p>
           This is data separation, not encryption or zero-knowledge privacy.
@@ -61,23 +61,22 @@ export default function PrivacyPage() {
         </p>
         <h2>Midnight foundation</h2>
         <p>
-          The repository includes a Compact contract skeleton checked with
-          compiler 0.26.0 and language 0.18.0 using <code>--skip-zk</code>. It
-          models public tender state, deadline assertions, eligibility
-          witnesses, and private bid input. It has no authorization or
-          credential validation and must not be deployed.
+          The Compact contract is release-compiled with compiler 0.31.1,
+          language 0.23.0, and runtime 0.16.0. Three instances are verified on
+          Preprod. They enforce owner authorization, vendor enrollment,
+          lifecycle deadlines, private witnesses, and duplicate-resistant bid
+          commitments. The hosted browser flow remains a separate adapter.
         </p>
         <h2>Intentionally next</h2>
         <ul>
           <li>
-            Wallet connection, trusted credentials, proof generation, and
-            deployment.
+            Wallet connection, proof generation, and direct contract calls.
           </li>
           <li>
-            Authenticated organization storage and tender lifecycle editing.
+            Trusted issuer credentials and authenticated organization access.
           </li>
           <li>
-            Confidential bid commitments and duplicate participation controls.
+            Durable vendor custody for amount/salt opening material.
           </li>
           <li>
             Winner selection, settlement, and verifiable results without

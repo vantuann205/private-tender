@@ -2,6 +2,8 @@
 
 [Live hosted prototype](https://private-tender-ten.vercel.app) · Vercel production · Neon PostgreSQL (Singapore)
 
+**Current progress: ~60%**
+
 The hosted workflow and the Midnight contract are deliberately separate: the browser UI remains database-backed, while three independently funded Compact instances are verified on Midnight Preprod.
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
@@ -15,12 +17,12 @@ This is not a production auction or settlement system. Neon PostgreSQL persists 
 - PostgreSQL-persisted demo tenders isolated by anonymous browser workspace. Creation validates required fields, lengths, supported rules, and future deadlines on both client and server. Open tenders derive Closed at their deadline.
 - Draft editing reuses the creation form; publishing opens a draft, and confirmed early closure permanently closes an open tender. Server-side workspace ownership and row locks protect each mutation. Opened contents are immutable and closed tenders cannot reopen.
 - Development eligibility adapter with eligible/ineligible states and tender binding.
-- Bid input simulation that refreshes public tender state, then rechecks eligibility, current deadline, and decimal amount before returning an amount-free local receipt. Amounts are never included in that read request; unavailable/closed tenders fail closed.
+- Browser-generated bid commitments that refresh public tender state, then recheck eligibility, deadline, and decimal amount. Only a SHA-256 commitment is persisted; the amount and private salt never enter the request body. Accepted commitments return an amount-free server receipt and update the public count.
 - Domain/client/API-boundary tests, an opt-in real-database API integration check, and a compiled-runtime-tested Compact foundation.
 
 ## Privacy model and limitations
 
-Public tender fields are allow-listed before entering application state; private amount fields are not part of the `Tender` type or database schema. Only those public-model fields are sent to the tender API and stored in PostgreSQL. Bid inputs remain in component memory and are discarded on successful simulation or navigation. Receipts contain no amount and are not persisted. No bid API, analytics, bid logging, or blockchain call is made.
+Public tender fields are allow-listed before entering application state; private amount and salt fields are not part of the `Tender` type or database schema. The browser hashes a versioned payload containing the tender ID, amount in cents, and a random 32-byte salt. The bid endpoint accepts exactly one lowercase 32-byte commitment. PostgreSQL stores the commitment, tender binding, receipt ID, and timestamp; public reads expose only the aggregate commitment count. No amount, salt, vendor identity, analytics payload, or blockchain call is sent.
 
 This is **separation of data, not cryptographic privacy**. Do not enter actual prices, identity information, or credentials. Database operators can read tender records; this is not end-to-end encryption. Browser extensions, developer tools, or compromised devices can inspect form input. Eligibility is a self-attestation stub, not an authenticated proof.
 
@@ -32,7 +34,7 @@ Sample tender deadlines are generated on the first visit and then persisted, so 
 
 Drafts can be edited and published from their detail screen. Both saving and publishing require a future deadline checked by the server. Open tenders may be closed early after confirmation. Content cannot change after opening; neither reopening nor deleting is implemented. Every edit/publish/close locks and reads the workspace-owned database row before applying a change, so simultaneous lifecycle requests cannot both succeed. Concurrent draft edits are serialized with the last accepted edit winning; revision history and edit merging are not implemented. Winner rules are recorded only; no winner is selected.
 
-The participation refresh is a best-effort simulation check, not an atomic bid acceptance or an authoritative blockchain clock. A closure after the public read can still race with the local receipt; real bids will require server/contract-side atomic acceptance. No real bid is accepted here.
+The bid endpoint locks and rechecks the workspace-owned tender before insertion, so a closed or expired tender cannot accept a new commitment. This is atomic database acceptance, not a Midnight proof or authoritative ledger clock. The hosted UI and deployed Compact instances remain separate.
 
 ## Stack and organization
 
@@ -46,7 +48,7 @@ src/features/bidding/      Private input validation and receipt boundary
 src/components/            Shared shell and icons
 src/lib/db/                Server-only pooled connection and Drizzle schema
 src/app/api/               Workspace-scoped tender API and generic health probe
-drizzle/                   Checked-in SQL migration and Drizzle metadata
+drizzle/                   Tender and opaque bid-commitment migrations
 scripts/                   Migration and opt-in real API integration checks
 contracts/                 Compact source and integration notes
 tests/                     Domain and storage behavior checks
@@ -90,8 +92,8 @@ For opt-in integration testing, migrate a disposable/test database, start the ap
 1. Open `/`; filter or search the four sample tenders.
 2. Open `/tenders/new`; create a Draft tender with a future deadline. Edit its details, save, and reload to check persistence. Select **Publish tender** to open participation and lock the details.
 3. Select **Participate in tender**. Click **Prove Eligibility** without checking the box to see Not eligible.
-4. Check the self-attestation box, then **Prove Eligibility**. Enter a fictional amount and select **Submit demo bid**.
-5. Verify the amount-free local receipt, then return to the board. No amount is published or persisted.
+4. Check the self-attestation box, then **Prove Eligibility**. Enter a fictional amount and select **Submit private commitment**.
+5. Save the displayed private salt and verify the amount-free server receipt. Return to the board and observe only the commitment count; no amount is published or persisted.
 6. Use **Close tender**, then **Confirm close** to end bidding early; reload to verify closure. Draft and Closed tenders do not permit participation or reopening. `/privacy` explains all trust boundaries.
 
 Use a different browser profile for a second isolated workspace. Clearing the workspace cookie starts fresh samples but does not delete old database records. Do not clear it if you need continued access.

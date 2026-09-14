@@ -26,7 +26,10 @@ export function decodeTenders(raw: string): Tender[] {
       !Array.isArray(v.requirements) ||
       !v.requirements.every((r) => typeof r === "string") ||
       !["Draft", "Open", "Closed"].includes(String(v.status)) ||
-      !Number.isFinite(Date.parse(String(v.deadline)))
+      !Number.isFinite(Date.parse(String(v.deadline))) ||
+      !Number.isInteger(v.bidCount) ||
+      Number(v.bidCount) < 0 ||
+      Number(v.bidCount) > 500
     )
       throw new Error("Invalid tender state.");
     // Allow-list public fields: API responses cannot add an amount to the tender model.
@@ -41,6 +44,7 @@ export function decodeTenders(raw: string): Tender[] {
       organization: String(v.organization),
       category: String(v.category),
       createdAt: String(v.createdAt),
+      bidCount: Number(v.bidCount),
     };
   });
 }

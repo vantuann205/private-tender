@@ -12,9 +12,10 @@ import { seedTenders } from "../src/features/tenders/seed";
 test("public API records reject malformed state and strip private extra fields", () => {
   const result = decodeTenders(
     JSON.stringify([
-      { ...seedTenders()[0], amount: "55000", vendorIdentity: "secret" },
+      { ...seedTenders()[0], bidCount: 3, amount: "55000", vendorIdentity: "secret" },
     ]),
   );
+  assert.equal(result[0].bidCount, 3);
   assert.equal("amount" in result[0], false);
   assert.equal("vendorIdentity" in result[0], false);
   for (const raw of [
@@ -22,6 +23,7 @@ test("public API records reject malformed state and strip private extra fields",
     "{}",
     '[{"id":3}]',
     JSON.stringify([{ ...seedTenders()[0], deadline: "invalid" }]),
+    JSON.stringify([{ ...seedTenders()[0], bidCount: -1 }]),
   ])
     assert.throws(() => decodeTenders(raw));
 });
