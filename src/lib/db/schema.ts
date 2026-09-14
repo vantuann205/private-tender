@@ -6,6 +6,8 @@ import {
   timestamp,
   text,
   primaryKey,
+  foreignKey,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const workspaces = pgTable("pt_workspaces", {
@@ -59,6 +61,37 @@ export const tenders = pgTable(
     check(
       "pt_tenders_winner_rule",
       sql`${table.winnerRule} IN ('Lowest eligible bid', 'Manual review (future)')`,
+    ),
+  ],
+);
+
+export const bidCommitments = pgTable(
+  "pt_bid_commitments",
+  {
+    workspaceHash: varchar("workspace_hash", { length: 64 })
+      .notNull()
+      .references(() => workspaces.tokenHash, { onDelete: "cascade" }),
+    tenderId: varchar("tender_id", { length: 64 }).notNull(),
+    id: varchar("id", { length: 64 }).notNull(),
+    commitment: varchar("commitment", { length: 64 }).notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceHash, table.id] }),
+    foreignKey({
+      columns: [table.workspaceHash, table.tenderId],
+      foreignColumns: [tenders.workspaceHash, tenders.id],
+    }).onDelete("cascade"),
+    unique("pt_bid_commitments_value").on(
+      table.workspaceHash,
+      table.tenderId,
+      table.commitment,
+    ),
+    check(
+      "pt_bid_commitments_hex",
+      sql`${table.commitment} ~ '^[a-f0-9]{64}$'`,
     ),
   ],
 );

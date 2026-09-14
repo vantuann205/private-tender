@@ -60,8 +60,23 @@ export function parseTenderInput(value: unknown): TenderInput {
     throw new RequestError(Object.values(errors)[0]!);
   return input;
 }
+export function parseBidCommitment(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new RequestError("Invalid bid commitment.");
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).length !== 1 ||
+    typeof record.commitment !== "string" ||
+    !/^[a-f0-9]{64}$/.test(record.commitment)
+  )
+    throw new RequestError("Only one 32-byte bid commitment is accepted.");
+  return { commitment: record.commitment };
+}
 export async function readTenderBody(request: Request) {
   return parseTenderInput(await readJsonBody(request));
+}
+export async function readBidCommitment(request: Request) {
+  return parseBidCommitment(await readJsonBody(request));
 }
 export async function readTenderMutation(request: Request): Promise<TenderMutation> {
   const value = await readJsonBody(request);

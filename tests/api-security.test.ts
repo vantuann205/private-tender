@@ -4,6 +4,7 @@ import {
   workspaceIdentity,
   assertSameOrigin,
   parseTenderInput,
+  parseBidCommitment,
   readTenderBody,
 } from "../src/lib/api-security";
 const input = {
@@ -70,4 +71,16 @@ test("JSON body guard validates content type and actual streamed size", async ()
   await assert.rejects(readTenderBody(request("{}", "text/plain")));
   await assert.rejects(readTenderBody(request("not json")));
   await assert.rejects(readTenderBody(request("x".repeat(32769))));
+});
+test("bid endpoint accepts one opaque commitment and rejects private bid material", () => {
+  const commitment = "ab".repeat(32);
+  assert.deepEqual(parseBidCommitment({ commitment }), { commitment });
+  for (const bad of [
+    null,
+    { commitment: "short" },
+    { commitment: commitment.toUpperCase() },
+    { commitment, amount: "1200.50" },
+    { commitment, privateSalt: "11".repeat(32) },
+  ])
+    assert.throws(() => parseBidCommitment(bad));
 });

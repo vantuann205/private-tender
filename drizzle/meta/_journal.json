@@ -8,6 +8,13 @@
       "when": 1788866907668,
       "tag": "0000_initial_workspace_tenders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789399358058,
+      "tag": "0001_smooth_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

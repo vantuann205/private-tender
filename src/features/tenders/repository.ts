@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq } from "drizzle-orm";
 import { getDatabase } from "../../lib/db/client";
-import { tenders, workspaces } from "../../lib/db/schema";
+import { bidCommitments, tenders, workspaces } from "../../lib/db/schema";
 import { RequestError } from "../../lib/api-security";
 import { seedTenders } from "./seed";
 import { type Tender, type TenderInput, type TenderMutation, validateTender } from "./domain";
@@ -117,5 +117,52 @@ export async function mutateWorkspaceTender(hash: string, mutation: TenderMutati
     }
     const [updated] = await tx.update(tenders).set(changes).where(owned).returning();
     return publicTender(updated);
+  });
+}
+
+export async function insertWorkspaceBidCommitment(
+  hash: string,
+  tenderId: string,
+  commitment: string,
+) {
+  return getDatabase().transaction(async (tx) => {
+    const owned = and(
+      eq(tenders.workspaceHash, hash),
+      eq(tenders.id, tenderId),
+    );
+    const [tender] = await tx.select().from(tenders).where(owned).for("update");
+    if (!tender)
+      throw new RequestError("Tender not found in this workspace.", 404);
+    if (tender.status !== "Open" || Date.parse(tender.deadline) <= Date.now())
+      throw new RequestError("Bidding is no longer open for this tender.", 409);
+    const [total] = await tx
+      .select({ value: count() })
+      .from(bidCommitments)
+      .where(
+        and(
+          eq(bidCommitments.workspaceHash, hash),
+          eq(bidCommitments.tenderId, tenderId),
+        ),
+      );
+    if (total.value >= 500)
+      throw new RequestError("This tender has reached its demo bid limit.", 409);
+    const [created] = await tx
+      .insert(bidCommitments)
+      .values({
+        workspaceHash: hash,
+        tenderId,
+        id: crypto.randomUUID(),
+        commitment,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!created)
+      throw new RequestError("This bid commitment was already submitted.", 409);
+    return {
+      id: created.id,
+      tenderId: created.tenderId,
+      commitment: created.commitment,
+      submittedAt: new Date(created.submittedAt).toISOString(),
+    };
   });
 }
