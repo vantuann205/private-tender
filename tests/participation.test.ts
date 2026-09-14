@@ -1,5 +1,8 @@
 import test from "node:test";
-import { submitCurrentDemoBid } from "../src/features/bidding/submit-bid";
+import {
+  createBidCommitment,
+  submitCurrentDemoBid,
+} from "../src/features/bidding/submit-bid";
 import assert from "node:assert/strict";
 test("bid simulation rechecks persisted state without transmitting its amount", async () => {
   const originalFetch = globalThis.fetch;
@@ -48,6 +51,37 @@ test("a demo participation flow returns a receipt without retaining the amount",
   assert.equal(receipt.tenderId, tender.id);
   assert.equal("amount" in receipt, false);
   assert.equal(JSON.stringify(receipt).includes("1200.50"), false);
+});
+test("bid commitments bind the tender, normalized amount and private salt without exposing either secret", async () => {
+  const proof = proveEligibility(tender, true, now);
+  const first = await createBidCommitment(
+    tender,
+    proof,
+    "1200.50",
+    "11".repeat(32),
+    now,
+  );
+  const sameValue = await createBidCommitment(
+    tender,
+    proof,
+    "1200.5",
+    "11".repeat(32),
+    now,
+  );
+  const differentSalt = await createBidCommitment(
+    tender,
+    proof,
+    "1200.50",
+    "22".repeat(32),
+    now,
+  );
+
+  assert.match(first.commitment, /^[a-f0-9]{64}$/);
+  assert.equal(first.commitment, sameValue.commitment);
+  assert.notEqual(first.commitment, differentSalt.commitment);
+  assert.equal(first.privateSalt, "11".repeat(32));
+  assert.equal(JSON.stringify(first.publicReceipt).includes("1200"), false);
+  assert.equal(JSON.stringify(first.publicReceipt).includes(first.privateSalt), false);
 });
 test("submission rejects missing, ineligible, and wrong-tender eligibility results", () => {
   assert.throws(() => submitDemoBid(tender, null, "100", now));

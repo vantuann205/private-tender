@@ -15,6 +15,38 @@ export type BidReceipt = {
   submittedAt: string;
   mode: "development";
 };
+export type PreparedBid = {
+  publicReceipt: BidReceipt & { commitment: string };
+  commitment: string;
+  privateSalt: string;
+};
+function amountInCents(amount: string) {
+  const [whole, fraction = ""] = amount.split(".");
+  return `${BigInt(whole)}${fraction.padEnd(2, "0")}`.replace(/^0+(?=\d)/, "");
+}
+function toHex(bytes: Uint8Array) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+export async function createBidCommitment(
+  tender: Tender,
+  proof: EligibilityResult | null,
+  amount: string,
+  privateSalt = toHex(crypto.getRandomValues(new Uint8Array(32))),
+  now = Date.now(),
+): Promise<PreparedBid> {
+  const receipt = submitDemoBid(tender, proof, amount, now);
+  if (!/^[a-f0-9]{64}$/.test(privateSalt))
+    throw new Error("Bid salt must be 32 bytes encoded as lowercase hexadecimal.");
+  const payload = `private-tender:v1\0${tender.id}\0${amountInCents(amount)}\0${privateSalt}`;
+  const commitment = toHex(new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload)),
+  ));
+  return {
+    commitment,
+    privateSalt,
+    publicReceipt: { ...receipt, commitment },
+  };
+}
 export function submitDemoBid(
   tender: Tender,
   proof: EligibilityResult | null,
