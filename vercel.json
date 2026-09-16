@@ -3,5 +3,5 @@
   "framework": "nextjs",
   "regions": ["sin1"],
   "installCommand": "corepack pnpm install --frozen-lockfile",
-  "buildCommand": "corepack pnpm build"
+  "buildCommand": "bash scripts/build-production.sh"
 }

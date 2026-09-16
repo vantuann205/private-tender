@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -28,6 +28,12 @@ const info = JSON.parse(readFileSync(`${root}.compact-generated/private-tender/c
 assert.equal(info["compiler-version"], "0.31.1");
 assert.equal(info["language-version"], "0.23.0");
 assert.equal(info["runtime-version"], "0.16.0");
+
+if (!fast) {
+  rmSync(`${root}public/zk`, { recursive: true, force: true });
+  mkdirSync(`${root}public/zk`, { recursive: true });
+  cpSync(`${root}.compact-generated/private-tender`, `${root}public/zk`, { recursive: true });
+}
 
 if (!compileOnly) {
   const tests = spawnSync(process.execPath, ["--test", "contracts/private-tender.test.mjs", "contracts/preprod-adapter.test.mjs"], { cwd: root, stdio: "inherit" });

@@ -57,6 +57,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Icon name="lock" />
             Privacy & development
           </Link>
+          <Link className={path === "/preprod" ? "nav-item active" : "nav-item"} href="/preprod">
+            <Icon name="shield" />
+            Midnight Preprod
+          </Link>
         </nav>
         <div className="sidebar-bottom">
           <Icon name="lock" />
