@@ -18,7 +18,7 @@
 | Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
 | Minimum 15 meaningful commits | Complete | [47+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
-The hosted product combines a database-backed tender board with a dedicated Lace-signed Preprod console. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod.
+The hosted product combines a database-backed tender board with a dedicated Lace-signed Preprod console. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
