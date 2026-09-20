@@ -16,7 +16,6 @@
 | README, setup and usage | Complete | [Local setup](#local-setup), [demonstration path](#demonstration-path), and [contract notes](contracts/README.md) |
 | CI/CD pipeline | Complete | [GitHub Actions workflow](.github/workflows/ci.yml); successful `main` builds are automatically deployed by Vercel |
 | Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
-| Demo video | **Pending** | Walkthrough link will be added after recording |
 | Minimum 15 meaningful commits | Complete | [47+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
 The hosted product combines a database-backed tender board with a dedicated Lace-signed Preprod console. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod.
