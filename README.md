@@ -1,8 +1,23 @@
 # PrivateTender
 
-[Live hosted prototype](https://private-tender-ten.vercel.app) · Vercel production · Neon PostgreSQL (Singapore)
+[![PrivateTender CI](https://github.com/vantuann205/private-tender/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vantuann205/private-tender/actions/workflows/ci.yml)
+[![Midnight Preprod](https://img.shields.io/badge/Midnight-Preprod-6f4cff)](https://private-tender-ten.vercel.app/preprod)
 
-**Current progress: ~60%**
+[Live application](https://private-tender-ten.vercel.app) | [Preprod contract console](https://private-tender-ten.vercel.app/preprod) | [Product X profile](https://x.com/vtuann_13205)
+
+## Level 4 - Waxing Gibbous submission
+
+| Requirement | Status | Verifiable evidence |
+|---|---:|---|
+| Public GitHub repository | Complete | [vantuann205/private-tender](https://github.com/vantuann205/private-tender) |
+| Working MVP live on Preprod | Complete | [Live product](https://private-tender-ten.vercel.app) and [wallet-signed Preprod console](https://private-tender-ten.vercel.app/preprod) |
+| Verifiable contract address | Complete | [`59f7fd5365f79c901ae145ad60eb06b4539a94807ec200d3c525cb859f75eb68`](https://explorer.preprod.midnight.network/contracts/stream/59f7fd5365f79c901ae145ad60eb06b4539a94807ec200d3c525cb859f75eb68) |
+| Preprod deployment proof | Complete | [Deployment transaction `00d62882...ce11`](https://explorer.preprod.midnight.network/transactions/00d62882525cfe7933dfdfd30e8674c5cc5d14b166580025e37edbf92c2d18ce11) and [machine-readable evidence](deployments/preprod.json) |
+| README, setup and usage | Complete | [Local setup](#local-setup), [demonstration path](#demonstration-path), and [contract notes](contracts/README.md) |
+| CI/CD pipeline | Complete | [GitHub Actions workflow](.github/workflows/ci.yml); successful `main` builds are automatically deployed by Vercel |
+| Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
+| Demo video | **Pending** | Walkthrough link will be added after recording |
+| Minimum 15 meaningful commits | Complete | [46+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
 The hosted workflow and the Midnight contract are deliberately separate: the browser UI remains database-backed, while three independently funded Compact instances are verified on Midnight Preprod.
 
