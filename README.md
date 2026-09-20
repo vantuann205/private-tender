@@ -17,13 +17,13 @@
 | CI/CD pipeline | Complete | [GitHub Actions workflow](.github/workflows/ci.yml); successful `main` builds are automatically deployed by Vercel |
 | Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
 | Demo video | **Pending** | Walkthrough link will be added after recording |
-| Minimum 15 meaningful commits | Complete | [46+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
+| Minimum 15 meaningful commits | Complete | [47+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
-The hosted workflow and the Midnight contract are deliberately separate: the browser UI remains database-backed, while three independently funded Compact instances are verified on Midnight Preprod.
+The hosted product combines a database-backed tender board with a dedicated Lace-signed Preprod console. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod.
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 
-This is not a production auction or settlement system. Neon PostgreSQL persists the hosted workflow; the separately deployed contract proves enrollment, lifecycle authorization, and private bid commitment rules on Preprod.
+This is not a production auction or settlement system. Neon PostgreSQL persists the tender workflow, while the `/preprod` console reads contract state and submits enrollment, lifecycle, private-bid, and deployment transactions through Lace.
 
 ## Implemented
 
@@ -125,7 +125,7 @@ Three distinct Preprod instances were deployed from three wallet addresses. Ever
 | 03 | [`e836c3ac…8ad3`](https://explorer.preprod.midnight.network/contracts/stream/e836c3acca7b54beaeab1c0df3c8b115fa76c8b4302fc0b0b221f1614fe48ad3) | [`00669743…d531`](https://explorer.preprod.midnight.network/transactions/00669743ac63c42003b4f8d31c7174c3d9d9348c6b732472e112ee345ecb5bd531) | [`enrollVendor`](https://explorer.preprod.midnight.network/transactions/009d3f4e974f4526ad5507cba4eb9e9e395fae2f0fb12915f7b510e09c421b2082) |
 | imported | [`8188ed97…ef9d`](https://explorer.preprod.midnight.network/contracts/stream/8188ed97c3e3ca5c43c7fa71796f1a9cf47affbf84d554d12c0d440076efef9d) | [`00358a5f…b99`](https://explorer.preprod.midnight.network/transactions/00358a5f272d11b4f38e8b78b73a177f58cd3d014d48097efd5fb7e869ed764b99) | [`enroll → open → bid`](https://explorer.preprod.midnight.network/transactions/009530c489fd94aaeb213a21a8b9334d018ddcccf10c5e177db822ba31aa65da3a) |
 
-Only opaque commitments are retained; duplicate bids under the same enrolled secret are rejected even when amount or salt changes. This is pseudonymous duplicate resistance, not one-real-vendor enforcement: a fresh approved secret is a different participant. No reveal, winner selection, escrow, or settlement circuit exists, and the hosted UI does not submit Midnight transactions. See [contract notes](contracts/README.md).
+Only opaque commitments are retained; duplicate bids under the same enrolled secret are rejected even when amount or salt changes. This is pseudonymous duplicate resistance, not one-real-vendor enforcement: a fresh approved secret is a different participant. No reveal, winner selection, escrow, or settlement circuit exists. The tender board remains database-backed; all wallet-signed Midnight actions are isolated in the hosted `/preprod` console. See [contract notes](contracts/README.md).
 
 ## Next milestones
 
