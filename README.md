@@ -16,9 +16,9 @@
 | README, setup and usage | Complete | [Local setup](#local-setup), [demonstration path](#demonstration-path), and [contract notes](contracts/README.md) |
 | CI/CD pipeline | Complete | [GitHub Actions workflow](.github/workflows/ci.yml); successful `main` builds are automatically deployed by Vercel |
 | Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
-| Minimum 15 meaningful commits | Complete | [47+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
+| Minimum 15 meaningful commits | Complete | [50+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
-The hosted product combines a database-backed tender board with a dedicated Lace-signed Preprod console. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod
+The hosted entry route opens the Lace-first Preprod workspace. Wallet signatures derive role-scoped private state, while Lace provides proof generation, fee balancing, and transaction submission without asking users to paste secrets. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod.
 
 Privacy-first procurement: publish clear requirements, check vendor eligibility, and eventually select a winning bid without exposing unsuccessful bid amounts.
 

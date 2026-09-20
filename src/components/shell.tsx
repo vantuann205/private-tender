@@ -17,49 +17,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
           PrivateTender<span className="brand-dot">.</span>
         </Link>
         <div className="workspace">
-          <span className="workspace-avatar">N</span>
+          <span className="workspace-avatar">L</span>
           <div>
-            <strong>Northstar Collective</strong>
-            <small>Procurement workspace</small>
+            <strong>Lace wallet</strong>
+            <small>Midnight Preprod</small>
           </div>
         </div>
         <nav aria-label="Main navigation">
-          <Link
-            className={
-              path === "/" ||
-              (path.startsWith("/tenders/") && path !== "/tenders/new")
-                ? "nav-item active"
-                : "nav-item"
-            }
-            href="/"
-          >
-            <Icon name="grid" />
-            Tender board
-          </Link>
-          <Link
-            className={path === "/tenders/new" ? "nav-item active" : "nav-item"}
-            href="/tenders/new"
-          >
-            <Icon name="plus" />
-            Create tender
-          </Link>
-          <Link
-            className={path === "/participate" ? "nav-item active" : "nav-item"}
-            href="/participate"
-          >
-            <Icon name="shield" />
-            Vendor participation
-          </Link>
-          <Link
-            className={path === "/privacy" ? "nav-item active" : "nav-item"}
-            href="/privacy"
-          >
-            <Icon name="lock" />
-            Privacy & development
-          </Link>
           <Link className={path === "/preprod" ? "nav-item active" : "nav-item"} href="/preprod">
             <Icon name="shield" />
-            Midnight Preprod
+            Tender workspace
           </Link>
         </nav>
         <div className="sidebar-bottom">
@@ -70,23 +37,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <br />
             Confidential participation.
           </p>
-          <span>First pass · Database-backed demo</span>
+          <span>Wallet-signed on Midnight Preprod</span>
         </div>
         <div className="profile">
-          <span className="profile-avatar">NC</span>
+          <span className="profile-avatar">L</span>
           <div>
-            Demo organization<small>No wallet connected</small>
+            Lace extension<small>Connect to begin</small>
           </div>
         </div>
       </aside>
       <div className="main-wrap">
         <header className="topbar">
           <span>
-            Workspace <span className="muted">/</span> Procurement
+            Wallet <span className="muted">/</span> Private tender
           </span>
           <span className="demo-indicator">
             <i />
-            Browser workspace
+            Preprod
           </span>
         </header>
         <main id="main" className="main-content">
@@ -94,7 +61,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="footer">
           PrivateTender <span>Public requirements. Private intentions.</span>
-          <span>Midnight integration · prototype</span>
+          <span>Wallet-signed Preprod transactions</span>
         </footer>
       </div>
     </div>

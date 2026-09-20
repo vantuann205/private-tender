@@ -1,4 +1,5 @@
-import { TenderBoard } from "@/features/tenders/tender-board";
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return <TenderBoard />;
+  redirect("/preprod");
 }
