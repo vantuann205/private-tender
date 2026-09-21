@@ -140,14 +140,14 @@ export default function PreprodPage() {
     }
   }
 
-  return <main style={{ maxWidth: 1040, margin: "0 auto", padding: "32px 20px 64px" }}>
-    <header style={{ marginBottom: 24 }}>
-      <p style={{ letterSpacing: "0.16em", textTransform: "uppercase", opacity: 0.65 }}>Midnight Preprod</p>
+  return <main className="preprod-console tender-console">
+    <header className="preprod-hero">
+      <p className="preprod-kicker">Midnight Preprod</p>
       <h1>PrivateTender wallet workspace</h1>
       <p>Connect Lace to create and operate private tenders. The page never requests a private key or owner secret.</p>
     </header>
 
-    <section className="panel" style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+    <section className="panel wallet-banner">
       <div>
         <strong>{walletAddress ? "Lace connected" : "Wallet required"}</strong>
         <p>{walletAddress ? walletAddress : "Use Lace 4.x on Midnight Preprod to continue."}</p>
@@ -158,7 +158,7 @@ export default function PreprodPage() {
       </button>
     </section>
 
-    {api ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginTop: 20 }}>
+    {api ? <div className="tender-console-grid">
       <section className="panel">
         <h2>Active tender</h2>
         <label>Contract address<input value={address} maxLength={64} onChange={(event) => { setAddress(event.target.value.trim()); setSnapshot(null); }} /></label>
@@ -169,7 +169,7 @@ export default function PreprodPage() {
           <dt>Enrolled wallets</dt><dd>{snapshot.enrolledVendorCount}</dd>
           <dt>Private bids</dt><dd>{snapshot.submissionCount}</dd>
         </dl> : null}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        <div className="tender-action-row">
           <button type="button" disabled={busy} onClick={() => { void transact("enroll"); }}>Enroll this wallet</button>
           <button type="button" disabled={busy} onClick={() => { void transact("open"); }}>Open tender</button>
           <button type="button" disabled={busy} onClick={() => { void transact("close"); }}>Close tender</button>

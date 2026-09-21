@@ -572,9 +572,7 @@ svg {
 }
 .nav-item.active {
   color: #fff;
-  background: #ffffff11;
-  border-left: 3px solid var(--amber);
-  padding-left: 9px;
+  background: #ffffff18;
 }
 .nav-item.active svg {
   color: var(--amber);
@@ -738,7 +736,8 @@ svg {
   font-size: 12px;
   font-weight: 600;
 }
-.preprod-console input {
+.preprod-console input,
+.tender-console textarea {
   min-width: 0;
   width: 100%;
   border: 1px solid #dce1dd;
@@ -769,6 +768,94 @@ svg {
 .preprod-console dd {
   margin: 0;
   font-weight: 600;
+}
+.tender-console {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 58px) 20px 72px;
+}
+.tender-console .preprod-hero {
+  margin-bottom: 30px;
+}
+.preprod-kicker {
+  margin: 0 0 8px;
+  color: #879196;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.tender-console .preprod-hero h1 {
+  max-width: 760px;
+  text-wrap: balance;
+}
+.tender-console .preprod-hero p:last-child {
+  max-width: 64ch;
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+.tender-console .panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(22px, 3vw, 30px);
+  box-shadow: 0 18px 45px rgba(17, 44, 64, .06);
+}
+.tender-console .panel h2 {
+  margin: 0;
+}
+.tender-console .wallet-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-color: #eadbb3;
+  background: #fffdf7;
+}
+.tender-console .wallet-banner > div {
+  min-width: 0;
+}
+.tender-console .wallet-banner p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.tender-console button {
+  box-shadow: 0 8px 20px rgba(17, 44, 64, .12);
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.tender-console button:hover:not(:disabled) {
+  background: #2d4356;
+  box-shadow: 0 11px 24px rgba(17, 44, 64, .18);
+  transform: translateY(-1px);
+}
+.tender-console button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.tender-console textarea {
+  min-height: 132px;
+  resize: vertical;
+}
+.tender-console-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.tender-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tender-console [role="status"],
+.tender-console [role="alert"] {
+  margin-top: 18px;
+  padding: 13px 16px;
+  border-radius: 6px;
+  background: #eef2ed;
+}
+.tender-console [role="alert"] {
+  color: #8c3029;
+  background: #fff0ed;
 }
 .preprod-console code,
 .preprod-console a {
@@ -1015,5 +1102,12 @@ svg {
   }
   .notice {
     padding: 15px;
+  }
+  .tender-console .wallet-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .tender-console .wallet-banner button {
+    width: 100%;
   }
 }
