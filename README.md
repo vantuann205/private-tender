@@ -15,7 +15,7 @@
 | Preprod deployment proof | Complete | [Deployment transaction `00d62882...ce11`](https://explorer.preprod.midnight.network/transactions/00d62882525cfe7933dfdfd30e8674c5cc5d14b166580025e37edbf92c2d18ce11) and [machine-readable evidence](deployments/preprod.json) |
 | README, setup and usage | Complete | [Local setup](#local-setup), [demonstration path](#demonstration-path), and [contract notes](contracts/README.md) |
 | CI/CD pipeline | Complete | [GitHub Actions workflow](.github/workflows/ci.yml); successful `main` builds are automatically deployed by Vercel |
-| Product X profile | Complete | [@vtuann_13205](https://x.com/vtuann_13205) |
+| Product X profile | Complete | [@Private Tender](https://x.com/YuXiangtrm) |
 | Minimum 15 meaningful commits | Complete | [50+ commits](https://github.com/vantuann205/private-tender/commits/main/) |
 
 The hosted entry route opens the Lace-first Preprod workspace. Wallet signatures derive role-scoped private state, while Lace provides proof generation, fee balancing, and transaction submission without asking users to paste secrets. Three independently funded Compact instances and their contract actions are publicly verifiable on Midnight Preprod.
